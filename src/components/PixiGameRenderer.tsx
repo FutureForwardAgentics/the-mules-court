@@ -130,6 +130,27 @@ function renderGameScene(
   const centerX = window.innerWidth / 2;
   const centerY = window.innerHeight / 2;
 
+  // DEBUG: Add a bright red rectangle to test rendering
+  const debugRect = new Graphics();
+  debugRect.rect(centerX - 200, centerY - 100, 400, 200);
+  debugRect.fill({ color: 0xff0000 });
+  scene.addChild(debugRect);
+
+  // DEBUG: Add visible text
+  const debugTextStyle = new TextStyle({
+    fontFamily: 'Arial',
+    fontSize: 48,
+    fill: 0x00ff00,
+    stroke: { color: 0xffffff, width: 4 },
+  });
+  const debugText = new Text({
+    text: 'PIXI IS WORKING!',
+    style: debugTextStyle,
+  });
+  debugText.anchor.set(0.5);
+  debugText.position.set(centerX, centerY);
+  scene.addChild(debugText);
+
   // Render deck in center
   renderDeck(scene, gameState, centerX, centerY - 100, onDrawCard, localPlayerId);
 
