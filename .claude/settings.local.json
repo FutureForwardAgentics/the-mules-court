@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__gitbutler__gitbutler_update_branches"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
