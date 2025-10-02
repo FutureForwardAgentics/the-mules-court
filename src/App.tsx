@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useGameState } from './hooks/useGameState';
+import { useGameWithAI } from './hooks/useGameWithAI';
 import { PixiGameRenderer } from './components/PixiGameRenderer';
+import { SessionViewer } from './components/SessionViewer';
 
 function App() {
   console.log('App component rendering (PixiJS version)');
@@ -76,25 +77,30 @@ function App() {
   return <GameComponent playerCount={playerCount} />;
 }
 
-// Separate component that uses the game hook
+// Separate component that uses the game hook with AI
 function GameComponent({ playerCount }: { playerCount: number }) {
   console.log('GameComponent rendering with playerCount:', playerCount);
-  const gameState = useGameState(playerCount);
+  const gameWithAI = useGameWithAI(playerCount, 'player-0');
 
   console.log('Game state initialized:', {
-    phase: gameState.gameState.phase,
-    players: gameState.gameState.players.length,
-    deck: gameState.gameState.deck.length,
+    phase: gameWithAI.gameState.phase,
+    players: gameWithAI.gameState.players.length,
+    deck: gameWithAI.gameState.deck.length,
+    session: gameWithAI.session?.id,
+    aiThinking: gameWithAI.isAIThinking,
   });
 
   return (
-    <PixiGameRenderer
-      gameState={gameState.gameState}
-      localPlayerId="player-0"
-      onCardClick={gameState.playCard}
-      onDrawCard={gameState.drawCard}
-      onEndTurn={gameState.endTurn}
-    />
+    <>
+      <PixiGameRenderer
+        gameState={gameWithAI.gameState}
+        localPlayerId="player-0"
+        onCardClick={gameWithAI.playCard}
+        onDrawCard={gameWithAI.drawCard}
+        onEndTurn={gameWithAI.endTurn}
+      />
+      <SessionViewer />
+    </>
   );
 }
 
