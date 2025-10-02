@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { GameState } from '../types/game';
 import { usePixiApp } from '../hooks/usePixiApp';
@@ -19,36 +19,50 @@ export function PixiGameRenderer({
   onDrawCard,
   onEndTurn,
 }: PixiGameRendererProps) {
-  const { canvasRef, app, isReady } = usePixiApp({
+  // Memoize options to prevent unnecessary re-initialization
+  const pixiOptions = useMemo(() => ({
     resizeTo: window,
     backgroundColor: 0x0f0a1e,
-  });
+  }), []);
+
+  const { canvasRef, app, isReady } = usePixiApp(pixiOptions);
 
   const sceneRef = useRef<Container | null>(null);
   const cardSpritesRef = useRef<Map<string, CardSprite>>(new Map());
 
   // Initialize scene
   useEffect(() => {
-    if (!app || !isReady) return;
+    if (!app || !isReady) {
+      console.log('Waiting for app to be ready...', { app: !!app, isReady });
+      return;
+    }
 
+    console.log('Initializing scene...');
     const scene = new Container();
     app.stage.addChild(scene);
     sceneRef.current = scene;
+    console.log('Scene initialized and added to stage');
 
     return () => {
+      console.log('Destroying scene...');
       scene.destroy({ children: true });
     };
   }, [app, isReady]);
 
   // Update scene based on game state
   useEffect(() => {
-    if (!app || !sceneRef.current) return;
+    if (!app || !sceneRef.current) {
+      console.log('Waiting for scene...', { app: !!app, scene: !!sceneRef.current });
+      return;
+    }
 
+    console.log('Rendering game scene...', { phase: gameState.phase, players: gameState.players.length });
     const scene = sceneRef.current;
     scene.removeChildren();
     cardSpritesRef.current.clear();
 
     renderGameScene(scene, gameState, localPlayerId, onCardClick, onDrawCard, onEndTurn, cardSpritesRef.current);
+    console.log('Game scene rendered');
   }, [app, gameState, localPlayerId, onCardClick, onDrawCard, onEndTurn]);
 
   return (
@@ -57,9 +71,29 @@ export function PixiGameRenderer({
       style={{
         width: '100vw',
         height: '100vh',
-        position: 'relative',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        overflow: 'hidden',
+        backgroundColor: '#0f0a1e',
       }}
-    />
+    >
+      {!isReady && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            color: 'white',
+            fontSize: '24px',
+            fontFamily: 'Arial, sans-serif',
+          }}
+        >
+          Loading game...
+        </div>
+      )}
+    </div>
   );
 }
 
