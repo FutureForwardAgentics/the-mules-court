@@ -1,4 +1,4 @@
-import { Player } from '../types/game';
+import type { Player } from '../types/game';
 import { GameCard } from './GameCard';
 
 interface PlayerAreaProps {

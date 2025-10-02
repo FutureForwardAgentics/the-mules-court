@@ -5,7 +5,6 @@ import { GameBoard } from './components/GameBoard';
 function App() {
   const [gameStarted, setGameStarted] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
-  const gameState = useGameState(playerCount);
 
   if (!gameStarted) {
     return (
@@ -65,6 +64,14 @@ function App() {
       </div>
     );
   }
+
+  // Only initialize game state after game has started
+  return <GameComponent playerCount={playerCount} />;
+}
+
+// Separate component that uses the game hook
+function GameComponent({ playerCount }: { playerCount: number }) {
+  const gameState = useGameState(playerCount);
 
   return (
     <GameBoard

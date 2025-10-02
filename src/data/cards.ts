@@ -1,4 +1,4 @@
-import { Card, CardType } from '../types/game';
+import type { Card, CardType } from '../types/game';
 
 const cardDefinitions: Omit<Card, 'id'>[] = [
   {
