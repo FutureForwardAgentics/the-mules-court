@@ -130,31 +130,23 @@ function renderGameScene(
   const centerX = window.innerWidth / 2;
   const centerY = window.innerHeight / 2;
 
-  // DEBUG: Add a bright red rectangle to test rendering
-  const debugRect = new Graphics();
-  debugRect.rect(centerX - 200, centerY - 100, 400, 200);
-  debugRect.fill({ color: 0xff0000 });
-  scene.addChild(debugRect);
+  // Simple test rendering - deck
+  const deckGraphics = new Graphics();
+  deckGraphics.rect(0, 0, 120, 180);
+  deckGraphics.fill({ color: 0x4b5563 });
+  deckGraphics.stroke({ color: 0x9ca3af, width: 2 });
+  deckGraphics.position.set(centerX - 60, centerY - 200);
+  scene.addChild(deckGraphics);
 
-  // DEBUG: Add visible text
-  const debugTextStyle = new TextStyle({
-    fontFamily: 'Arial',
-    fontSize: 48,
-    fill: 0x00ff00,
-    stroke: { color: 0xffffff, width: 4 },
+  const deckText = new Text({
+    text: `Deck: ${gameState.deck.length}`,
+    style: { fontSize: 20, fill: 0xffffff },
   });
-  const debugText = new Text({
-    text: 'PIXI IS WORKING!',
-    style: debugTextStyle,
-  });
-  debugText.anchor.set(0.5);
-  debugText.position.set(centerX, centerY);
-  scene.addChild(debugText);
+  deckText.anchor.set(0.5);
+  deckText.position.set(centerX, centerY - 90);
+  scene.addChild(deckText);
 
-  // Render deck in center
-  renderDeck(scene, gameState, centerX, centerY - 100, onDrawCard, localPlayerId);
-
-  // Render players in a circle around the center
+  // Render players as simple boxes
   const playerCount = gameState.players.length;
   const radius = Math.min(window.innerWidth, window.innerHeight) * 0.35;
 
@@ -163,20 +155,33 @@ function renderGameScene(
     const x = centerX + Math.cos(angle) * radius;
     const y = centerY + Math.sin(angle) * radius;
 
-    const isLocalPlayer = player.id === localPlayerId;
     const isCurrentPlayer = index === gameState.currentPlayerIndex;
 
-    renderPlayerArea(
-      scene,
-      player,
-      x,
-      y,
-      isLocalPlayer,
-      isCurrentPlayer,
-      gameState.phase,
-      onCardClick,
-      cardSprites
-    );
+    // Simple player box
+    const playerBox = new Graphics();
+    playerBox.rect(-100, -50, 200, 100);
+    playerBox.fill({ color: isCurrentPlayer ? 0x991b1b : 0x1e293b });
+    playerBox.stroke({ color: isCurrentPlayer ? 0xef4444 : 0x475569, width: 2 });
+    playerBox.position.set(x, y);
+    scene.addChild(playerBox);
+
+    // Player name
+    const nameText = new Text({
+      text: player.name,
+      style: { fontSize: 16, fill: 0xffffff },
+    });
+    nameText.anchor.set(0.5);
+    nameText.position.set(x, y - 20);
+    scene.addChild(nameText);
+
+    // Card count
+    const cardText = new Text({
+      text: `Cards: ${player.hand.length}`,
+      style: { fontSize: 14, fill: 0xcccccc },
+    });
+    cardText.anchor.set(0.5);
+    cardText.position.set(x, y + 10);
+    scene.addChild(cardText);
   });
 
   // Render current player indicator
