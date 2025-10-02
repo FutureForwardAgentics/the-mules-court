@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **The Mule's Court** is a 2-4 player card game based on Isaac Asimov's Foundation universe, built as a single-page React application. The game is inspired by Love Letter, featuring deduction, risk, and elimination mechanics with 16 unique cards.
 
+**Rendering**: This project uses **PixiJS v8** for 2D graphics rendering via WebGL/WebGPU, providing high-performance card animations, visual effects, and interactive gameplay elements.
+
 ## Commands
 
 ### Development
@@ -92,6 +94,26 @@ Check if winner has enough tokens:
 - **Tailwind CSS 4.x** with PostCSS integration
 - Gradient backgrounds and themed card colors per character
 - Responsive grid layout (1 column mobile, 2 columns desktop)
+
+### PixiJS Rendering Engine
+
+**PixiJS v8** is the 2D rendering library used for this project, providing GPU-accelerated graphics via WebGL and WebGPU.
+
+**API Documentation**: Comprehensive PixiJS v8 documentation for LLMs is available in:
+- `./public/llms.txt` - Curated links to specific documentation sections
+- `./public/llms-full.txt` - Complete API documentation in a single file
+
+**Key PixiJS concepts for this project**:
+- **Application**: The main entry point that manages the renderer, stage, and ticker
+- **Scene Graph**: Container hierarchy for organizing visual elements (cards, players, effects)
+- **Sprites**: 2D image rendering for cards and game elements
+- **Textures**: GPU-managed images loaded via the Assets API
+- **Ticker**: Game loop for animations and updates
+- **Events**: Mouse/touch interaction system for card selection and dragging
+- **Graphics**: Vector drawing API for UI elements, borders, and effects
+- **Filters**: Post-processing effects (glow, shadows, blur) for visual polish
+
+**Integration approach**: PixiJS should be integrated alongside React, not replace it. React manages game state and UI structure, while PixiJS handles the visual rendering layer. Use refs to mount the PixiJS Application canvas into the React component tree.
 
 ## Important Patterns
 
