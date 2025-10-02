@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "mcp__gitbutler__gitbutler_update_branches"
+      "mcp__gitbutler__gitbutler_update_branches",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [],
     "ask": []

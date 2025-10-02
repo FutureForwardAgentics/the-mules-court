@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useGameState } from './hooks/useGameState';
-import { GameBoard } from './components/GameBoard';
+import { PixiGameRenderer } from './components/PixiGameRenderer';
 
 function App() {
   const [gameStarted, setGameStarted] = useState(false);
@@ -74,13 +74,12 @@ function GameComponent({ playerCount }: { playerCount: number }) {
   const gameState = useGameState(playerCount);
 
   return (
-    <GameBoard
+    <PixiGameRenderer
       gameState={gameState.gameState}
       localPlayerId="player-0"
       onCardClick={gameState.playCard}
       onDrawCard={gameState.drawCard}
       onEndTurn={gameState.endTurn}
-      onStartNewRound={gameState.startNewRound}
     />
   );
 }
