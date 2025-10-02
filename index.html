@@ -1,13 +1,679 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>mules-court-game</title>
-  </head>
-  <body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Mule's Court - A Foundation Universe Card Game</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+    </style>
+</head>
+<body>
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+    <script type="text/babel">
+        const { useState, useCallback } = React;
+
+        // Card definitions
+        const cardDefinitions = [
+            {
+                type: 'informant',
+                value: 1,
+                name: 'Informant',
+                ability: 'Name a character (not Informant). If another player has that card, they are eliminated.',
+                color: 'from-slate-700 to-slate-900',
+                icon: '👤',
+                quote: 'I have reason to believe someone here is not who they claim...',
+                description: 'The most common of the converted'
+            },
+            {
+                type: 'han-pritcher',
+                value: 2,
+                name: 'Han Pritcher',
+                ability: 'Look at another player\'s hand.',
+                color: 'from-blue-800 to-blue-950',
+                icon: '🎖️',
+                quote: 'Your position grants you no secrets from me...',
+                description: 'The converted captain who believes his loyalty is freely chosen'
+            },
+            {
+                type: 'bail-channis',
+                value: 2,
+                name: 'Bail Channis',
+                ability: 'Look at another player\'s hand.',
+                color: 'from-indigo-800 to-indigo-950',
+                icon: '🎭',
+                quote: 'Let me help you understand the situation...',
+                description: 'The agent playing a deeper game'
+            },
+            {
+                type: 'ebling-mis',
+                value: 3,
+                name: 'Ebling Mis',
+                ability: 'Compare hands with another player. Lower value is eliminated.',
+                color: 'from-amber-800 to-amber-950',
+                icon: '📚',
+                quote: 'Let us compare what we know...',
+                description: 'The scholar racing toward a truth that will kill him'
+            },
+            {
+                type: 'magnifico',
+                value: 3,
+                name: 'Magnifico Giganticus',
+                ability: 'Compare hands with another player. Lower value is eliminated.',
+                color: 'from-purple-800 to-purple-950',
+                icon: '🎵',
+                quote: 'Listen to my Visi-Sonor and reveal yourself...',
+                description: 'The clown whose performance compels truth'
+            },
+            {
+                type: 'shielded-mind',
+                value: 4,
+                name: 'Shielded Mind',
+                ability: 'Until your next turn, ignore effects from other players.',
+                color: 'from-cyan-800 to-cyan-950',
+                icon: '🛡️',
+                quote: 'I know how to protect my thoughts from scrutiny...',
+                description: 'Protection that might itself be part of the design'
+            },
+            {
+                type: 'bayta-darell',
+                value: 5,
+                name: 'Bayta Darell',
+                ability: 'Choose any player to discard their hand and draw a new card.',
+                color: 'from-rose-800 to-rose-950',
+                icon: '💫',
+                quote: 'You must reveal yourself - we\'re searching for the Mule!',
+                description: 'The woman whose intuition provides some immunity'
+            },
+            {
+                type: 'toran-darell',
+                value: 5,
+                name: 'Toran Darell',
+                ability: 'Choose any player to discard their hand and draw a new card.',
+                color: 'from-red-800 to-red-950',
+                icon: '⚔️',
+                quote: 'We will find him, no matter the cost...',
+                description: 'The searcher touched by the Mule\'s power'
+            },
+            {
+                type: 'mayor-indbur',
+                value: 6,
+                name: 'Mayor Indbur',
+                ability: 'Trade hands with another player.',
+                color: 'from-yellow-700 to-yellow-900',
+                icon: '👑',
+                quote: 'As Mayor of Terminus, I command an exchange...',
+                description: 'Certain of his independence, never suspecting his conversion'
+            },
+            {
+                type: 'first-speaker',
+                value: 7,
+                name: 'The First Speaker',
+                ability: 'If you have this with Mayor Indbur or either Darell, you must discard this card.',
+                color: 'from-emerald-800 to-emerald-950',
+                icon: '🔮',
+                quote: 'My presence must remain hidden from all eyes...',
+                description: 'Secrecy is paramount, even at the cost of influence'
+            },
+            {
+                type: 'mule',
+                value: 8,
+                name: 'The Mule',
+                ability: 'If you discard this card, you are eliminated from the round.',
+                color: 'from-red-950 to-black',
+                icon: '👁️',
+                quote: 'I am the master of minds, the conqueror of wills...',
+                description: 'The mutant who rewrites emotion itself'
+            }
+        ];
+
+        // Helper functions
+        function createDeck() {
+            const deck = [];
+            let idCounter = 0;
+            const cardCounts = {
+                'informant': 5,
+                'han-pritcher': 1,
+                'bail-channis': 1,
+                'ebling-mis': 1,
+                'magnifico': 1,
+                'shielded-mind': 2,
+                'bayta-darell': 1,
+                'toran-darell': 1,
+                'mayor-indbur': 1,
+                'first-speaker': 1,
+                'mule': 1
+            };
+
+            cardDefinitions.forEach(cardDef => {
+                const count = cardCounts[cardDef.type];
+                for (let i = 0; i < count; i++) {
+                    deck.push({ ...cardDef, id: `${cardDef.type}-${idCounter++}` });
+                }
+            });
+
+            return deck;
+        }
+
+        function shuffleDeck(deck) {
+            const shuffled = [...deck];
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled;
+        }
+
+        function initializeRound(players, tokensToWin) {
+            const deck = shuffleDeck(createDeck());
+            const cardsToRemove = players.length === 2 ? 3 : players.length === 3 ? 1 : 0;
+            const removedCard = cardsToRemove > 0 ? deck[0] : null;
+            const playDeck = deck.slice(cardsToRemove);
+
+            const resetPlayers = players.map(p => ({
+                ...p,
+                hand: [],
+                discardPile: [],
+                isProtected: false,
+                isEliminated: false
+            }));
+
+            resetPlayers.forEach(player => {
+                player.hand.push(playDeck.pop());
+            });
+
+            return {
+                players: resetPlayers,
+                deck: playDeck,
+                currentPlayerIndex: 0,
+                phase: 'draw',
+                tokensToWin,
+                removedCard
+            };
+        }
+
+        function initializeGame(playerCount) {
+            const players = Array.from({ length: playerCount }, (_, i) => ({
+                id: `player-${i}`,
+                name: `Player ${i + 1}`,
+                hand: [],
+                discardPile: [],
+                devotionTokens: 0,
+                isProtected: false,
+                isEliminated: false
+            }));
+
+            const tokensToWin = playerCount === 2 ? 7 : playerCount === 3 ? 5 : 4;
+            return initializeRound(players, tokensToWin);
+        }
+
+        function determineWinner(players) {
+            const playersWithValues = players.map(p => ({
+                player: p,
+                handValue: p.hand[0]?.value || 0,
+                discardTotal: p.discardPile.reduce((sum, card) => sum + card.value, 0)
+            }));
+
+            playersWithValues.sort((a, b) => {
+                if (b.handValue !== a.handValue) return b.handValue - a.handValue;
+                return b.discardTotal - a.discardTotal;
+            });
+
+            return playersWithValues[0].player;
+        }
+
+        // Components
+        function GameCard({ card, isPlayable = false, isRevealed = true, onClick, size = 'medium' }) {
+            const sizeClasses = {
+                small: 'w-24 h-36 text-xs',
+                medium: 'w-48 h-72 text-sm',
+                large: 'w-64 h-96 text-base'
+            };
+
+            const iconSizes = {
+                small: 'text-2xl',
+                medium: 'text-4xl',
+                large: 'text-6xl'
+            };
+
+            const valueSizes = {
+                small: 'text-2xl',
+                medium: 'text-4xl',
+                large: 'text-5xl'
+            };
+
+            if (!isRevealed) {
+                return (
+                    <div
+                        className={`${sizeClasses[size]} bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg shadow-xl border-2 border-gray-600 flex items-center justify-center cursor-pointer hover:scale-105 transition-transform`}
+                        onClick={onClick}
+                    >
+                        <div className="text-6xl opacity-50">👁️</div>
+                    </div>
+                );
+            }
+
+            return (
+                <div
+                    className={`${sizeClasses[size]} bg-gradient-to-br ${card.color} rounded-lg shadow-2xl p-3 flex flex-col relative ${
+                        isPlayable ? 'cursor-pointer hover:scale-105 hover:shadow-red-500/50 transition-all border-2 border-red-400' : ''
+                    }`}
+                    onClick={isPlayable ? onClick : undefined}
+                >
+                    <div className="flex justify-between items-start mb-2">
+                        <div className={`${iconSizes[size]} opacity-90`}>{card.icon}</div>
+                        <div className="text-right">
+                            <div className={`${valueSizes[size]} font-bold text-white`}>{card.value}</div>
+                        </div>
+                    </div>
+
+                    <h2 className={`${size === 'small' ? 'text-sm' : size === 'medium' ? 'text-xl' : 'text-2xl'} font-bold text-white mb-1`}>
+                        {card.name}
+                    </h2>
+                    {size !== 'small' && (
+                        <p className="text-xs text-gray-300 italic mb-2 line-clamp-2">{card.description}</p>
+                    )}
+
+                    {size !== 'small' && <div className="border-t border-gray-400 opacity-30 my-2"></div>}
+
+                    {size === 'large' && (
+                        <div className="mb-3">
+                            <p className="text-xs text-gray-200 italic leading-relaxed line-clamp-3">
+                                "{card.quote}"
+                            </p>
+                        </div>
+                    )}
+
+                    {size !== 'small' && (
+                        <div className="mt-auto">
+                            <div className="bg-black bg-opacity-40 rounded-lg p-2 border border-gray-600">
+                                <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Ability</div>
+                                <p className="text-xs text-white leading-relaxed">{card.ability}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-gray-400 opacity-20"></div>
+                    <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-gray-400 opacity-20"></div>
+                </div>
+            );
+        }
+
+        function PlayerArea({ player, isCurrentPlayer, isLocalPlayer, onCardClick }) {
+            return (
+                <div
+                    className={`p-4 rounded-lg border-2 ${
+                        isCurrentPlayer
+                            ? 'border-red-500 bg-red-950/30'
+                            : 'border-gray-700 bg-gray-900/30'
+                    } ${player.isEliminated ? 'opacity-50' : ''}`}
+                >
+                    <div className="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 className="text-lg font-bold text-white">
+                                {player.name}
+                                {isCurrentPlayer && <span className="ml-2 text-red-400">⚡</span>}
+                                {player.isProtected && <span className="ml-2 text-cyan-400">🛡️</span>}
+                                {player.isEliminated && <span className="ml-2 text-gray-500">💀</span>}
+                            </h3>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="text-sm text-gray-400">Devotion:</div>
+                            <div className="flex gap-1">
+                                {Array.from({ length: player.devotionTokens }).map((_, i) => (
+                                    <div key={i} className="w-8 h-8 rounded-full bg-gradient-to-br from-red-600 to-red-900 border border-red-400 flex items-center justify-center">
+                                        <span className="text-sm">👁️</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mb-3">
+                        <div className="text-xs text-gray-400 uppercase mb-2">Hand</div>
+                        <div className="flex gap-2">
+                            {player.hand.map(card => (
+                                <GameCard
+                                    key={card.id}
+                                    card={card}
+                                    size="small"
+                                    isRevealed={isLocalPlayer}
+                                    isPlayable={isCurrentPlayer && isLocalPlayer}
+                                    onClick={() => onCardClick?.(card.id)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {player.discardPile.length > 0 && (
+                        <div>
+                            <div className="text-xs text-gray-400 uppercase mb-2">Played Cards</div>
+                            <div className="flex gap-1 flex-wrap">
+                                {player.discardPile.map((card, i) => (
+                                    <div key={`${card.id}-${i}`} className="text-2xl opacity-70" title={card.name}>
+                                        {card.icon}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        function GameBoard({ gameState, localPlayerId, onCardClick, onDrawCard, onEndTurn, onStartNewRound }) {
+            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+            const isLocalPlayerTurn = currentPlayer.id === localPlayerId;
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black p-8">
+                    <div className="max-w-7xl mx-auto">
+                        <header className="text-center mb-8">
+                            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-purple-400 mb-2">
+                                The Mule's Court
+                            </h1>
+                            <p className="text-gray-300 text-sm italic">
+                                "When the Mule touches your mind, you know no better love"
+                            </p>
+                        </header>
+
+                        <div className="bg-gray-800/50 rounded-lg p-4 mb-6 border border-gray-700">
+                            <div className="flex items-center justify-between">
+                                <div className="text-gray-300">
+                                    <span className="font-bold text-white">{currentPlayer.name}'s</span> turn
+                                    {gameState.phase === 'draw' && ' - Draw a card'}
+                                    {gameState.phase === 'play' && ' - Play a card'}
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <div className="text-sm text-gray-400">
+                                        Cards in deck: <span className="text-white font-bold">{gameState.deck.length}</span>
+                                    </div>
+                                    <div className="text-sm text-gray-400">
+                                        Tokens to win: <span className="text-white font-bold">{gameState.tokensToWin}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-center mb-8">
+                            <div className="bg-gray-800/50 rounded-lg p-6 border border-gray-700">
+                                <div className="flex items-center gap-6">
+                                    <div className="text-center">
+                                        <div className="text-xs text-gray-400 uppercase mb-2">Deck</div>
+                                        <div className="w-32 h-48 bg-gradient-to-br from-gray-700 to-gray-900 rounded-lg shadow-xl border-2 border-gray-600 flex items-center justify-center">
+                                            <div className="text-6xl opacity-50">👁️</div>
+                                        </div>
+                                        <div className="text-sm text-gray-400 mt-2">{gameState.deck.length} cards</div>
+                                    </div>
+
+                                    <div className="flex flex-col gap-3">
+                                        {isLocalPlayerTurn && gameState.phase === 'draw' && (
+                                            <button
+                                                onClick={onDrawCard}
+                                                disabled={gameState.deck.length === 0}
+                                                className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white font-bold rounded-lg transition-colors"
+                                            >
+                                                Draw Card
+                                            </button>
+                                        )}
+                                        {isLocalPlayerTurn && gameState.phase === 'play' && (
+                                            <button
+                                                onClick={onEndTurn}
+                                                className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-colors"
+                                            >
+                                                End Turn
+                                            </button>
+                                        )}
+                                        {gameState.phase === 'round-end' && (
+                                            <button
+                                                onClick={onStartNewRound}
+                                                className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-colors"
+                                            >
+                                                Start New Round
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {gameState.players.map((player) => (
+                                <PlayerArea
+                                    key={player.id}
+                                    player={player}
+                                    isCurrentPlayer={player.id === currentPlayer.id}
+                                    isLocalPlayer={player.id === localPlayerId}
+                                    onCardClick={onCardClick}
+                                />
+                            ))}
+                        </div>
+
+                        {gameState.phase === 'round-end' && (
+                            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                                <div className="bg-gray-800 rounded-xl p-8 border-2 border-red-500 max-w-md">
+                                    <h2 className="text-3xl font-bold text-red-400 mb-4 text-center">Round Complete</h2>
+                                    <p className="text-gray-300 text-center mb-6">
+                                        {currentPlayer.name} has proven their devotion runs deepest this round.
+                                    </p>
+                                    <div className="text-center mb-6">
+                                        <div className="text-5xl mb-2">👁️</div>
+                                        <div className="text-xl text-white">+1 Devotion Token</div>
+                                    </div>
+                                    <button
+                                        onClick={onStartNewRound}
+                                        className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-colors"
+                                    >
+                                        Continue
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {gameState.phase === 'game-end' && (
+                            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                                <div className="bg-gray-800 rounded-xl p-8 border-2 border-purple-500 max-w-md">
+                                    <h2 className="text-4xl font-bold text-purple-400 mb-4 text-center">Game Over</h2>
+                                    <p className="text-gray-300 text-center mb-6">
+                                        {gameState.players.find(p => p.devotionTokens >= gameState.tokensToWin)?.name} has been
+                                        revealed as the most thoroughly converted servant of the Mule.
+                                    </p>
+                                    <div className="text-center mb-6 text-sm text-gray-400 italic">
+                                        "You thought you were playing for yourself, but you served only the Mule."
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        function App() {
+            const [gameStarted, setGameStarted] = useState(false);
+            const [playerCount, setPlayerCount] = useState(2);
+            const [gameState, setGameState] = useState(null);
+
+            const drawCard = useCallback(() => {
+                setGameState(prev => {
+                    if (prev.deck.length === 0 || prev.phase !== 'draw') return prev;
+
+                    const newDeck = [...prev.deck];
+                    const drawnCard = newDeck.pop();
+                    const newPlayers = [...prev.players];
+                    newPlayers[prev.currentPlayerIndex].hand.push(drawnCard);
+
+                    return {
+                        ...prev,
+                        deck: newDeck,
+                        players: newPlayers,
+                        phase: 'play'
+                    };
+                });
+            }, []);
+
+            const playCard = useCallback((cardId) => {
+                setGameState(prev => {
+                    const currentPlayer = prev.players[prev.currentPlayerIndex];
+                    const cardIndex = currentPlayer.hand.findIndex(c => c.id === cardId);
+                    if (cardIndex === -1) return prev;
+
+                    const newPlayers = [...prev.players];
+                    const playedCard = currentPlayer.hand[cardIndex];
+
+                    newPlayers[prev.currentPlayerIndex] = {
+                        ...currentPlayer,
+                        hand: currentPlayer.hand.filter((_, i) => i !== cardIndex),
+                        discardPile: [...currentPlayer.discardPile, playedCard]
+                    };
+
+                    newPlayers.forEach(p => {
+                        if (p.id !== currentPlayer.id) {
+                            p.isProtected = false;
+                        }
+                    });
+
+                    return {
+                        ...prev,
+                        players: newPlayers
+                    };
+                });
+            }, []);
+
+            const endTurn = useCallback(() => {
+                setGameState(prev => {
+                    const activePlayers = prev.players.filter(p => !p.isEliminated);
+
+                    if (activePlayers.length === 1) {
+                        const newPlayers = prev.players.map(p =>
+                            p.id === activePlayers[0].id
+                                ? { ...p, devotionTokens: p.devotionTokens + 1 }
+                                : p
+                        );
+                        return { ...prev, players: newPlayers, phase: 'round-end' };
+                    }
+
+                    if (prev.deck.length === 0) {
+                        const winner = determineWinner(activePlayers);
+                        const newPlayers = prev.players.map(p =>
+                            p.id === winner.id
+                                ? { ...p, devotionTokens: p.devotionTokens + 1 }
+                                : p
+                        );
+                        return { ...prev, players: newPlayers, phase: 'round-end' };
+                    }
+
+                    let nextIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
+                    while (prev.players[nextIndex].isEliminated) {
+                        nextIndex = (nextIndex + 1) % prev.players.length;
+                    }
+
+                    return {
+                        ...prev,
+                        currentPlayerIndex: nextIndex,
+                        phase: 'draw'
+                    };
+                });
+            }, []);
+
+            const startNewRound = useCallback(() => {
+                setGameState(prev => {
+                    const winner = prev.players.find(p => p.devotionTokens >= prev.tokensToWin);
+                    if (winner) {
+                        return { ...prev, phase: 'game-end' };
+                    }
+
+                    return initializeRound(prev.players, prev.tokensToWin);
+                });
+            }, []);
+
+            const startGame = () => {
+                setGameState(initializeGame(playerCount));
+                setGameStarted(true);
+            };
+
+            if (!gameStarted) {
+                return (
+                    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black flex items-center justify-center p-8">
+                        <div className="bg-gray-800 rounded-xl p-8 border-2 border-purple-500 max-w-2xl">
+                            <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-purple-400 mb-4 text-center">
+                                The Mule's Court
+                            </h1>
+                            <p className="text-gray-300 text-center mb-2">A Foundation Universe Card Game</p>
+                            <p className="text-gray-400 text-sm text-center italic mb-8">
+                                "When the Mule touches your mind, you know no better love"
+                            </p>
+
+                            <div className="bg-gray-900/50 rounded-lg p-6 mb-6 border border-gray-700">
+                                <h2 className="text-xl font-bold text-white mb-4">The Tragic Premise</h2>
+                                <p className="text-gray-300 text-sm leading-relaxed mb-4">
+                                    You are not trying to reach the Mule. You have already been touched by his power, your emotions
+                                    fundamentally rewritten, though you do not consciously know it. You believe yourself to be acting
+                                    independently, pursuing your own goals, engaged in political maneuvering or resistance efforts.
+                                </p>
+                                <p className="text-gray-300 text-sm leading-relaxed">
+                                    But every action you take, every clever play, every successful round, is simply proof of how
+                                    thoroughly the Mule has conquered your mind. When you win, you reveal that your emotional
+                                    conversion runs deeper than the others.
+                                </p>
+                            </div>
+
+                            <div className="mb-6">
+                                <label className="block text-white font-bold mb-3">Number of Players</label>
+                                <div className="flex gap-3">
+                                    {[2, 3, 4].map((count) => (
+                                        <button
+                                            key={count}
+                                            onClick={() => setPlayerCount(count)}
+                                            className={`flex-1 py-3 px-6 rounded-lg font-bold transition-colors ${
+                                                playerCount === count
+                                                    ? 'bg-red-600 text-white'
+                                                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                                            }`}
+                                        >
+                                            {count} Players
+                                        </button>
+                                    ))}
+                                </div>
+                                <p className="text-gray-400 text-xs mt-2 text-center">
+                                    Tokens to win: {playerCount === 2 ? '7' : playerCount === 3 ? '5' : '4'}
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={startGame}
+                                className="w-full py-4 bg-gradient-to-r from-red-600 to-purple-600 hover:from-red-700 hover:to-purple-700 text-white font-bold text-lg rounded-lg transition-colors"
+                            >
+                                Begin the Game
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <GameBoard
+                    gameState={gameState}
+                    localPlayerId="player-0"
+                    onCardClick={playCard}
+                    onDrawCard={drawCard}
+                    onEndTurn={endTurn}
+                    onStartNewRound={startNewRound}
+                />
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
 </html>
