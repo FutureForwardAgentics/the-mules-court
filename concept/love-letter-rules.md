@@ -123,7 +123,7 @@ The eight character types are replaced with roles and positions within the Mule'
 
 **The Viceroy** replaces King (×1 card, Value 6). The Mule's highest-ranking converted servant, second only to the Mule himself. The Viceroy can exchange positions with anyone, reshuffling the hierarchy of the converted.
 
-**The First Citizen** replaces Countess (×1 card, Value 7). A position of such prominence that it cannot coexist with the Viceroy or the searching Darells. If you hold this card alongside the Viceroy or either Darell, you must discard the First Citizen, because such visibility is incompatible with the Mule's other agents.
+**The First Speaker** replaces Countess (×1 card, Value 7). The leader of the Second Foundation cannot risk exposure—near Indbur, a converted mayor might unconsciously report the encounter to the Mule or near the Darells, as those actively hunting for the Mule might recognize the Second Foundation's involvement.
 
 **The Mule** replaces Princess (×1 card, Value 8). The mutant himself, the master of emotional manipulation. If you are forced to reveal your direct connection to the Mule, your cover is completely blown and you are eliminated from the round.
 
