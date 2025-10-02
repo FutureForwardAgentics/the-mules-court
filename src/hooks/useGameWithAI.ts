@@ -72,14 +72,14 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
             // Clear thinking after draw
             setIsAIThinking(false);
           } else if (decision.action === 'play' && decision.cardId) {
-            gameState.playCard(decision.cardId);
+            gameState.playCard(decision.cardId, decision.choice);
 
             if (session) {
               await gameDB.recordEvent({
                 sessionId: session.id,
                 type: 'play_card',
                 playerId: currentPlayer.id,
-                data: { cardId: decision.cardId },
+                data: { cardId: decision.cardId, choice: decision.choice },
                 gameState: gameState.gameState,
               });
             }
@@ -127,17 +127,17 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
   }, [gameState, session]);
 
   // Enhanced play card with recording
-  const playCardWithRecording = useCallback(async (cardId: string) => {
+  const playCardWithRecording = useCallback(async (cardId: string, choice?: any) => {
     const currentPlayer = gameState.gameState.players[gameState.gameState.currentPlayerIndex];
 
-    gameState.playCard(cardId);
+    gameState.playCard(cardId, choice);
 
     if (session) {
       await gameDB.recordEvent({
         sessionId: session.id,
         type: 'play_card',
         playerId: currentPlayer.id,
-        data: { cardId },
+        data: { cardId, choice },
         gameState: gameState.gameState,
       });
     }

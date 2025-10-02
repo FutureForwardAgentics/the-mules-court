@@ -1,13 +1,14 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Container, Graphics, Text, TextStyle } from 'pixi.js';
-import type { GameState } from '../types/game';
+import type { GameState, Card } from '../types/game';
 import { usePixiApp } from '../hooks/usePixiApp';
 import { CardSprite } from '../pixi/CardSprite';
+import { CardInteractionModal, type CardInteractionChoice } from './CardInteractionModal';
 
 interface PixiGameRendererProps {
   gameState: GameState;
   localPlayerId: string;
-  onCardClick: (cardId: string) => void;
+  onCardClick: (cardId: string, choice?: CardInteractionChoice) => void;
   onDrawCard: () => void;
   onEndTurn: () => void;
 }
@@ -19,6 +20,10 @@ export function PixiGameRenderer({
   onDrawCard,
   onEndTurn,
 }: PixiGameRendererProps) {
+  // Modal state for card interactions
+  const [selectedCard, setSelectedCard] = useState<Card | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
   // Memoize options to prevent unnecessary re-initialization
   const pixiOptions = useMemo(() => ({
     resizeTo: window,
@@ -29,6 +34,33 @@ export function PixiGameRenderer({
 
   const sceneRef = useRef<Container | null>(null);
   const cardSpritesRef = useRef<Map<string, CardSprite>>(new Map());
+
+  // Handle card selection - show modal instead of playing immediately
+  const handleCardSelect = (cardId: string) => {
+    const currentPlayer = gameState.players.find(p => p.id === localPlayerId);
+    if (!currentPlayer) return;
+
+    const card = currentPlayer.hand.find(c => c.id === cardId);
+    if (!card) return;
+
+    setSelectedCard(card);
+    setShowModal(true);
+  };
+
+  // Handle modal confirmation
+  const handleModalConfirm = (choice: CardInteractionChoice) => {
+    if (selectedCard) {
+      onCardClick(selectedCard.id, choice);
+      setShowModal(false);
+      setSelectedCard(null);
+    }
+  };
+
+  // Handle modal cancel
+  const handleModalCancel = () => {
+    setShowModal(false);
+    setSelectedCard(null);
+  };
 
   // Initialize scene
   useEffect(() => {
@@ -61,9 +93,9 @@ export function PixiGameRenderer({
     scene.removeChildren();
     cardSpritesRef.current.clear();
 
-    renderGameScene(scene, gameState, localPlayerId, onCardClick, onDrawCard, onEndTurn, cardSpritesRef.current);
+    renderGameScene(scene, gameState, localPlayerId, handleCardSelect, onDrawCard, onEndTurn, cardSpritesRef.current);
     console.log('Game scene rendered');
-  }, [app, gameState, localPlayerId, onCardClick, onDrawCard, onEndTurn]);
+  }, [app, gameState, localPlayerId, onDrawCard, onEndTurn]);
 
   return (
     <div
@@ -114,6 +146,17 @@ export function PixiGameRenderer({
       >
         PixiJS: {isReady ? 'READY' : 'LOADING'} | Players: {gameState.players.length} | Phase: {gameState.phase}
       </div>
+
+      {/* Card interaction modal */}
+      {showModal && selectedCard && (
+        <CardInteractionModal
+          card={selectedCard}
+          players={gameState.players}
+          currentPlayerId={localPlayerId}
+          onConfirm={handleModalConfirm}
+          onCancel={handleModalCancel}
+        />
+      )}
     </div>
   );
 }

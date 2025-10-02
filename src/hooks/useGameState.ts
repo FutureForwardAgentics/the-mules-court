@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react';
 import type { GameState, Player } from '../types/game';
 import { createDeck, shuffleDeck } from '../data/cards';
+import { applyCardEffect, checkFirstSpeakerAutoDiscard, autoDiscardFirstSpeaker } from '../game/cardEffects';
+import type { CardInteractionChoice } from '../components/CardInteractionModal';
 
 export function useGameState(playerCount: number) {
   const [gameState, setGameState] = useState<GameState>(() => initializeGame(playerCount));
@@ -23,7 +25,7 @@ export function useGameState(playerCount: number) {
     });
   }, []);
 
-  const playCard = useCallback((cardId: string) => {
+  const playCard = useCallback((cardId: string, choice?: CardInteractionChoice) => {
     setGameState(prev => {
       // Can only play cards during the 'play' phase
       if (prev.phase !== 'play') return prev;
@@ -51,10 +53,28 @@ export function useGameState(playerCount: number) {
         }
       });
 
-      return {
+      let updatedState: GameState = {
         ...prev,
         players: newPlayers
       };
+
+      // Apply card effect
+      const effectResult = applyCardEffect(updatedState, playedCard, currentPlayer.id, choice);
+      updatedState = effectResult.gameState;
+
+      // Log effect message
+      if (effectResult.message) {
+        console.log(`💫 Card Effect: ${effectResult.message}`);
+      }
+
+      // Check for First Speaker auto-discard after drawing
+      const playerAfterEffect = updatedState.players[updatedState.currentPlayerIndex];
+      if (checkFirstSpeakerAutoDiscard(playerAfterEffect)) {
+        console.log('⚠️ First Speaker must be discarded!');
+        updatedState = autoDiscardFirstSpeaker(updatedState, playerAfterEffect.id);
+      }
+
+      return updatedState;
     });
   }, []);
 
