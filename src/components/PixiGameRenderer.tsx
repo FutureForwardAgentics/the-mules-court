@@ -173,7 +173,7 @@ function renderGameScene(
 
     // Simple player box
     const playerBox = new Graphics();
-    playerBox.rect(-100, -50, 200, 100);
+    playerBox.rect(-150, -80, 300, 160);
     playerBox.fill({ color: isCurrentPlayer ? 0x991b1b : 0x1e293b });
     playerBox.stroke({ color: isCurrentPlayer ? 0xef4444 : 0x475569, width: 2 });
     playerBox.position.set(x, y);
@@ -182,20 +182,98 @@ function renderGameScene(
     // Player name
     const nameText = new Text({
       text: player.name,
-      style: { fontSize: 16, fill: 0xffffff },
+      style: { fontSize: 16, fill: 0xffffff, fontWeight: 'bold' },
     });
     nameText.anchor.set(0.5);
-    nameText.position.set(x, y - 20);
+    nameText.position.set(x, y - 60);
     scene.addChild(nameText);
 
-    // Card count
-    const cardText = new Text({
-      text: `Cards: ${player.hand.length}`,
-      style: { fontSize: 14, fill: 0xcccccc },
+    // Render player's cards
+    const isLocalPlayer = player.id === localPlayerId;
+    const cardY = y - 20;
+    const cardSpacing = 70;
+    const startX = x - (player.hand.length - 1) * (cardSpacing / 2);
+
+    player.hand.forEach((card: any, cardIndex: number) => {
+      const cardX = startX + cardIndex * cardSpacing;
+
+      // Card background
+      const cardGfx = new Graphics();
+      cardGfx.roundRect(0, 0, 60, 90, 4);
+
+      if (isLocalPlayer) {
+        // Show actual card for local player
+        const colors: Record<string, number> = {
+          'from-slate-700 to-slate-900': 0x334155,
+          'from-blue-800 to-blue-950': 0x1e40af,
+          'from-indigo-800 to-indigo-950': 0x3730a3,
+          'from-amber-800 to-amber-950': 0x92400e,
+          'from-purple-800 to-purple-950': 0x6b21a8,
+          'from-cyan-800 to-cyan-950': 0x155e75,
+          'from-rose-800 to-rose-950': 0x9f1239,
+          'from-red-800 to-red-950': 0x991b1b,
+          'from-yellow-700 to-yellow-900': 0xa16207,
+          'from-emerald-800 to-emerald-950': 0x065f46,
+          'from-red-950 to-black': 0x450a0a,
+        };
+        cardGfx.fill({ color: colors[card.color] || 0x334155 });
+        cardGfx.stroke({ color: 0x9ca3af, width: 2 });
+      } else {
+        // Card back for opponent
+        cardGfx.fill({ color: 0x374151 });
+        cardGfx.stroke({ color: 0x6b7280, width: 2 });
+      }
+
+      cardGfx.position.set(cardX - 30, cardY);
+
+      // Make card clickable if it's player's turn and their card
+      if (isCurrentPlayer && isLocalPlayer && gameState.phase === 'play') {
+        cardGfx.eventMode = 'static';
+        cardGfx.cursor = 'pointer';
+        cardGfx.on('pointerover', () => {
+          cardGfx.scale.set(1.1);
+        });
+        cardGfx.on('pointerout', () => {
+          cardGfx.scale.set(1);
+        });
+        cardGfx.on('pointerdown', () => {
+          console.log('Card clicked:', card.name);
+          _onCardClick(card.id);
+        });
+      }
+
+      scene.addChild(cardGfx);
+
+      // Card value
+      if (isLocalPlayer) {
+        const valueText = new Text({
+          text: card.value.toString(),
+          style: { fontSize: 24, fill: 0xffffff, fontWeight: 'bold' },
+        });
+        valueText.anchor.set(0.5);
+        valueText.position.set(cardX, cardY + 20);
+        scene.addChild(valueText);
+
+        // Card icon
+        const iconText = new Text({
+          text: card.icon,
+          style: { fontSize: 20 },
+        });
+        iconText.anchor.set(0.5);
+        iconText.position.set(cardX, cardY + 50);
+        scene.addChild(iconText);
+      } else {
+        // Card back icon
+        const backIcon = new Text({
+          text: '👁️',
+          style: { fontSize: 32 },
+        });
+        backIcon.anchor.set(0.5);
+        backIcon.position.set(cardX, cardY + 45);
+        backIcon.alpha = 0.5;
+        scene.addChild(backIcon);
+      }
     });
-    cardText.anchor.set(0.5);
-    cardText.position.set(x, y + 10);
-    scene.addChild(cardText);
   });
 
   // Render current player indicator

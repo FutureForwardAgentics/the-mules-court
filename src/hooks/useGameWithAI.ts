@@ -31,11 +31,22 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
   // Auto-play AI turns
   useEffect(() => {
     const currentPlayer = gameState.gameState.players[gameState.gameState.currentPlayerIndex];
+    const currentPhase = gameState.gameState.phase;
 
     // Check if it's an AI player's turn
     const isAITurn = currentPlayer.id !== humanPlayerId && !currentPlayer.isEliminated;
 
-    if (isAITurn && !isAIThinking && session) {
+    console.log('AI Check:', {
+      playerName: currentPlayer.name,
+      playerId: currentPlayer.id,
+      isAI: isAITurn,
+      thinking: isAIThinking,
+      phase: currentPhase,
+      hasSession: !!session
+    });
+
+    if (isAITurn && !isAIThinking && session && (currentPhase === 'draw' || currentPhase === 'play')) {
+      console.log('🤖 AI will act for', currentPlayer.name);
       setIsAIThinking(true);
 
       const decision = SimpleAI.decideAction(gameState.gameState, currentPlayer.id);
@@ -44,50 +55,59 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
         const delay = SimpleAI.getActionDelay();
 
         aiTimeoutRef.current = window.setTimeout(async () => {
-          console.log(`AI ${currentPlayer.name} deciding:`, decision);
+          console.log(`🤖 AI ${currentPlayer.name} executing:`, decision);
 
           if (decision.action === 'draw') {
             gameState.drawCard();
 
-            await gameDB.recordEvent({
-              sessionId: session.id,
-              type: 'draw_card',
-              playerId: currentPlayer.id,
-              data: { action: 'draw' },
-              gameState: gameState.gameState,
-            });
+            if (session) {
+              await gameDB.recordEvent({
+                sessionId: session.id,
+                type: 'draw_card',
+                playerId: currentPlayer.id,
+                data: { action: 'draw' },
+                gameState: gameState.gameState,
+              });
+            }
+            // Clear thinking after draw
+            setIsAIThinking(false);
           } else if (decision.action === 'play' && decision.cardId) {
             gameState.playCard(decision.cardId);
 
-            await gameDB.recordEvent({
-              sessionId: session.id,
-              type: 'play_card',
-              playerId: currentPlayer.id,
-              data: { cardId: decision.cardId },
-              gameState: gameState.gameState,
-            });
+            if (session) {
+              await gameDB.recordEvent({
+                sessionId: session.id,
+                type: 'play_card',
+                playerId: currentPlayer.id,
+                data: { cardId: decision.cardId },
+                gameState: gameState.gameState,
+              });
+            }
 
             // Auto end turn after playing
             setTimeout(() => {
               gameState.endTurn();
+              setIsAIThinking(false);
             }, 300);
+          } else {
+            setIsAIThinking(false);
           }
-
-          setIsAIThinking(false);
         }, delay);
       } else {
+        console.log('AI has no valid decision');
         setIsAIThinking(false);
       }
     }
 
-    // Cleanup timeout on unmount or when dependencies change
+    // Cleanup timeout on unmount
     return () => {
       if (aiTimeoutRef.current) {
         clearTimeout(aiTimeoutRef.current);
         aiTimeoutRef.current = null;
       }
     };
-  }, [gameState.gameState, humanPlayerId, isAIThinking, session]);
+    // Only re-run when player index or phase changes, not full game state
+  }, [gameState.gameState.currentPlayerIndex, gameState.gameState.phase, humanPlayerId, isAIThinking, session]);
 
   // Enhanced draw card with recording
   const drawCardWithRecording = useCallback(async () => {
