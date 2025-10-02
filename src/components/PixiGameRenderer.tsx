@@ -76,6 +76,7 @@ export function PixiGameRenderer({
         left: 0,
         overflow: 'hidden',
         backgroundColor: '#0f0a1e',
+        border: '5px solid lime', // DEBUG: visible border
       }}
     >
       {!isReady && (
@@ -88,11 +89,31 @@ export function PixiGameRenderer({
             color: 'white',
             fontSize: '24px',
             fontFamily: 'Arial, sans-serif',
+            backgroundColor: 'red',
+            padding: '20px',
+            zIndex: 9999,
           }}
         >
           Loading game...
         </div>
       )}
+      {/* DEBUG: Always visible element */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          color: 'yellow',
+          fontSize: '16px',
+          fontFamily: 'monospace',
+          backgroundColor: 'rgba(0,0,0,0.8)',
+          padding: '10px',
+          zIndex: 10000,
+          border: '2px solid yellow',
+        }}
+      >
+        PixiJS: {isReady ? 'READY' : 'LOADING'} | Players: {gameState.players.length} | Phase: {gameState.phase}
+      </div>
     </div>
   );
 }

@@ -12,7 +12,10 @@ function App() {
   if (!gameStarted) {
     console.log('Rendering start screen');
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black flex items-center justify-center p-8">
+      <div
+        className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black flex items-center justify-center p-8"
+        style={{ border: '10px solid red' }} // DEBUG
+      >
         <div className="bg-gray-800 rounded-xl p-8 border-2 border-purple-500 max-w-2xl">
           <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-purple-400 mb-4 text-center">
             The Mule's Court
