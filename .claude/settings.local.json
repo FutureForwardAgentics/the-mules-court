@@ -7,7 +7,8 @@
       "Bash(npm test:*)",
       "Bash(npm run dev:*)",
       "Bash(cat:*)",
-      "Bash(npm run preview:*)"
+      "Bash(npm run preview:*)",
+      "Bash(pkill:*)"
     ],
     "deny": [],
     "ask": []
