@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { GameState, Player, Card } from '../types/game';
+import type { GameState, Player } from '../types/game';
 import { createDeck, shuffleDeck } from '../data/cards';
 
 export function useGameState(playerCount: number) {
@@ -136,7 +136,7 @@ function initializeRound(players: Player[], tokensToWin: number): GameState {
   const playDeck = deck.slice(cardsToRemove);
 
   // Reset players for new round
-  const resetPlayers = players.map(p => ({
+  const resetPlayers: Player[] = players.map(p => ({
     ...p,
     hand: [],
     discardPile: [],

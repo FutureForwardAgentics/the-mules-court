@@ -1,4 +1,4 @@
-import { GameState } from '../types/game';
+import type { GameState } from '../types/game';
 import { PlayerArea } from './PlayerArea';
 
 interface GameBoardProps {

@@ -1,4 +1,4 @@
-import { Card } from '../types/game';
+import type { Card } from '../types/game';
 
 interface GameCardProps {
   card: Card;
