@@ -1,9 +1,22 @@
 {
   "permissions": {
     "allow": [
-      "mcp__gitbutler__gitbutler_update_branches"
+      "mcp__gitbutler__gitbutler_update_branches",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run dev:*)",
+      "Bash(cat:*)",
+      "Bash(npm run preview:*)",
+      "Bash(timeout 5 npm run dev)",
+      "Bash(lsof:*)",
+      "Bash(timeout 3 npm run dev)",
+      "Bash(echo:*)",
+      "Read(//private/tmp/**)"
     ],
     "deny": [],
-    "ask": []
+    "ask": [
+      "Bash(pkill:*)"
+    ]
   }
 }

@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react';
 import type { GameState, Player } from '../types/game';
 import { createDeck, shuffleDeck } from '../data/cards';
+import { applyCardEffect, checkFirstSpeakerAutoDiscard, autoDiscardFirstSpeaker } from '../game/cardEffects';
+import type { CardInteractionChoice } from '../components/CardInteractionModal';
+import { validateCardPlay } from '../game/gameValidation';
 
 export function useGameState(playerCount: number) {
   const [gameState, setGameState] = useState<GameState>(() => initializeGame(playerCount));
@@ -12,28 +15,43 @@ export function useGameState(playerCount: number) {
       const newDeck = [...prev.deck];
       const drawnCard = newDeck.pop()!;
       const newPlayers = [...prev.players];
-      newPlayers[prev.currentPlayerIndex].hand.push(drawnCard);
+      const currentPlayerIdx = prev.currentPlayerIndex;
+      newPlayers[currentPlayerIdx].hand.push(drawnCard);
 
-      return {
+      let updatedState: GameState = {
         ...prev,
         deck: newDeck,
         players: newPlayers,
         phase: 'play'
       };
+
+      // Check if First Speaker must be auto-discarded after drawing
+      const currentPlayer = updatedState.players[currentPlayerIdx];
+      if (checkFirstSpeakerAutoDiscard(currentPlayer)) {
+        console.log('⚠️ First Speaker must be discarded after drawing!');
+        updatedState = autoDiscardFirstSpeaker(updatedState, currentPlayer.id);
+      }
+
+      return updatedState;
     });
   }, []);
 
-  const playCard = useCallback((cardId: string) => {
+  const playCard = useCallback((cardId: string, choice?: CardInteractionChoice) => {
     setGameState(prev => {
       // Can only play cards during the 'play' phase
       if (prev.phase !== 'play') return prev;
 
       const currentPlayer = prev.players[prev.currentPlayerIndex];
+
+      // Validate the play
+      const validation = validateCardPlay(prev, currentPlayer.id, cardId);
+      if (!validation.valid) {
+        console.warn(`❌ Invalid play: ${validation.reason}`);
+        return prev;
+      }
+
       const cardIndex = currentPlayer.hand.findIndex(c => c.id === cardId);
       if (cardIndex === -1) return prev;
-
-      // Player must have at least 2 cards to play (1 drawn + 1 in hand)
-      if (currentPlayer.hand.length < 2) return prev;
 
       const newPlayers = [...prev.players];
       const playedCard = currentPlayer.hand[cardIndex];
@@ -51,10 +69,28 @@ export function useGameState(playerCount: number) {
         }
       });
 
-      return {
+      let updatedState: GameState = {
         ...prev,
         players: newPlayers
       };
+
+      // Apply card effect
+      const effectResult = applyCardEffect(updatedState, playedCard, currentPlayer.id, choice);
+      updatedState = effectResult.gameState;
+
+      // Log effect message
+      if (effectResult.message) {
+        console.log(`💫 Card Effect: ${effectResult.message}`);
+      }
+
+      // Check for First Speaker auto-discard after drawing
+      const playerAfterEffect = updatedState.players[updatedState.currentPlayerIndex];
+      if (checkFirstSpeakerAutoDiscard(playerAfterEffect)) {
+        console.log('⚠️ First Speaker must be discarded!');
+        updatedState = autoDiscardFirstSpeaker(updatedState, playerAfterEffect.id);
+      }
+
+      return updatedState;
     });
   }, []);
 

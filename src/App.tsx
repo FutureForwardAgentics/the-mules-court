@@ -1,14 +1,22 @@
 import { useState } from 'react';
-import { useGameState } from './hooks/useGameState';
-import { GameBoard } from './components/GameBoard';
+import { useGameWithAI } from './hooks/useGameWithAI';
+import { PixiGameRenderer } from './components/PixiGameRenderer';
+import { SessionViewer } from './components/SessionViewer';
 
 function App() {
+  console.log('App component rendering (PixiJS version)');
   const [gameStarted, setGameStarted] = useState(false);
   const [playerCount, setPlayerCount] = useState(2);
 
+  console.log('Game state:', { gameStarted, playerCount });
+
   if (!gameStarted) {
+    console.log('Rendering start screen');
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black flex items-center justify-center p-8">
+      <div
+        className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-black flex items-center justify-center p-8"
+        style={{ border: '10px solid red' }} // DEBUG
+      >
         <div className="bg-gray-800 rounded-xl p-8 border-2 border-purple-500 max-w-2xl">
           <h1 className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-purple-400 mb-4 text-center">
             The Mule's Court
@@ -69,19 +77,30 @@ function App() {
   return <GameComponent playerCount={playerCount} />;
 }
 
-// Separate component that uses the game hook
+// Separate component that uses the game hook with AI
 function GameComponent({ playerCount }: { playerCount: number }) {
-  const gameState = useGameState(playerCount);
+  console.log('GameComponent rendering with playerCount:', playerCount);
+  const gameWithAI = useGameWithAI(playerCount, 'player-0');
+
+  console.log('Game state initialized:', {
+    phase: gameWithAI.gameState.phase,
+    players: gameWithAI.gameState.players.length,
+    deck: gameWithAI.gameState.deck.length,
+    session: gameWithAI.session?.id,
+    aiThinking: gameWithAI.isAIThinking,
+  });
 
   return (
-    <GameBoard
-      gameState={gameState.gameState}
-      localPlayerId="player-0"
-      onCardClick={gameState.playCard}
-      onDrawCard={gameState.drawCard}
-      onEndTurn={gameState.endTurn}
-      onStartNewRound={gameState.startNewRound}
-    />
+    <>
+      <PixiGameRenderer
+        gameState={gameWithAI.gameState}
+        localPlayerId="player-0"
+        onCardClick={gameWithAI.playCard}
+        onDrawCard={gameWithAI.drawCard}
+        onEndTurn={gameWithAI.endTurn}
+      />
+      <SessionViewer />
+    </>
   );
 }
 
