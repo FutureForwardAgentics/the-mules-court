@@ -25,9 +25,15 @@ export function useGameState(playerCount: number) {
 
   const playCard = useCallback((cardId: string) => {
     setGameState(prev => {
+      // Can only play cards during the 'play' phase
+      if (prev.phase !== 'play') return prev;
+
       const currentPlayer = prev.players[prev.currentPlayerIndex];
       const cardIndex = currentPlayer.hand.findIndex(c => c.id === cardId);
       if (cardIndex === -1) return prev;
+
+      // Player must have at least 2 cards to play (1 drawn + 1 in hand)
+      if (currentPlayer.hand.length < 2) return prev;
 
       const newPlayers = [...prev.players];
       const playedCard = currentPlayer.hand[cardIndex];
@@ -101,6 +107,11 @@ export function useGameState(playerCount: number) {
 }
 
 function initializeGame(playerCount: number): GameState {
+  // Validate player count
+  if (playerCount < 2 || playerCount > 4) {
+    throw new Error(`Invalid player count: ${playerCount}. Must be between 2 and 4.`);
+  }
+
   const players: Player[] = Array.from({ length: playerCount }, (_, i) => ({
     id: `player-${i}`,
     name: `Player ${i + 1}`,
