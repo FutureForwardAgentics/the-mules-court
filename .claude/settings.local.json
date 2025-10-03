@@ -15,7 +15,8 @@
       "Read(//private/tmp/**)",
       "Bash(npx:*)",
       "Bash(npm run:*)",
-      "Bash(/dev/null)"
+      "Bash(/dev/null)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": [
