@@ -80,7 +80,7 @@ export function PlayerArea({ player, isCurrentPlayer, isLocalPlayer, onCardClick
               cards={player.hand}
               size="small"
               isRevealed={isLocalPlayer}
-              isInteractive={isCurrentPlayer && isLocalPlayer}
+              isInteractive={isCurrentPlayer && isLocalPlayer && player.hand.length === 2}
               layout="horizontal"
               spacing={8}
               onCardClick={onCardClick}

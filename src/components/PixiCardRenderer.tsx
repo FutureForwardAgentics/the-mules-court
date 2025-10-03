@@ -124,13 +124,53 @@ export function PixiCardRenderer({
     };
   }, [cards, size, isRevealed, isInteractive, layout, spacing, onCardClick]);
 
+  // Calculate card dimensions for overlay buttons
+  const getDimensions = () => {
+    const dims = {
+      small: { width: 96, height: 144 },
+      medium: { width: 192, height: 288 },
+      large: { width: 256, height: 384 },
+    };
+    return dims[size];
+  };
+
+  const cardDims = getDimensions();
+
   return (
     <div
-      ref={canvasRef}
       style={{
+        position: 'relative',
         display: 'inline-block',
-        pointerEvents: isInteractive ? 'auto' : 'none',
       }}
-    />
+    >
+      <div
+        ref={canvasRef}
+        style={{
+          display: 'inline-block',
+          pointerEvents: isInteractive ? 'auto' : 'none',
+        }}
+      />
+      {/* Invisible test automation overlays */}
+      {isInteractive && onCardClick && cards.map((card, index) => (
+        <button
+          key={card.id}
+          data-testid={`card-${card.id}`}
+          onClick={() => onCardClick(card.id)}
+          style={{
+            position: 'absolute',
+            left: layout === 'horizontal' ? `${index * (cardDims.width + spacing)}px` : 0,
+            top: layout === 'vertical' ? `${index * (cardDims.height + spacing)}px` : 0,
+            width: `${cardDims.width}px`,
+            height: `${cardDims.height}px`,
+            opacity: 0,
+            cursor: 'pointer',
+            border: 'none',
+            background: 'transparent',
+            padding: 0,
+          }}
+          aria-label={`Play ${card.name}`}
+        />
+      ))}
+    </div>
   );
 }

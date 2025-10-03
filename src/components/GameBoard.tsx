@@ -147,6 +147,7 @@ export function GameBoard({
               <div className="flex flex-col gap-3">
                 {isLocalPlayerTurn && gameState.phase === 'draw' && (
                   <button
+                    data-testid="draw-card-button"
                     onClick={onDrawCard}
                     disabled={gameState.deck.length === 0}
                     className="px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 text-white font-bold rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-red-500/50 active:scale-95"
@@ -157,6 +158,7 @@ export function GameBoard({
                 )}
                 {isLocalPlayerTurn && gameState.phase === 'play' && (
                   <button
+                    data-testid="end-turn-button"
                     onClick={onEndTurn}
                     className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-purple-500/50 active:scale-95"
                   >
@@ -166,6 +168,7 @@ export function GameBoard({
                 )}
                 {gameState.phase === 'round-end' && (
                   <button
+                    data-testid="next-round-button"
                     onClick={onStartNewRound}
                     className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-lg hover:shadow-green-500/50 active:scale-95 animate-[pulse_1.5s_ease-in-out_infinite]"
                   >
@@ -214,6 +217,7 @@ export function GameBoard({
                 </div>
               </div>
               <button
+                data-testid="round-end-continue-button"
                 onClick={onStartNewRound}
                 className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
               >
@@ -226,7 +230,7 @@ export function GameBoard({
 
         {/* Game End Modal */}
         {gameState.phase === 'game-end' && (
-          <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 animate-[fadeIn_0.5s_ease-out]">
+          <div data-testid="game-end-modal" className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 animate-[fadeIn_0.5s_ease-out]">
             <div className={`bg-gray-800 rounded-xl p-8 border-2 border-purple-500 max-w-md transform ${
               showVictory ? 'animate-[bounce_0.8s_ease-out]' : ''
             } shadow-2xl shadow-purple-500/50`}>
