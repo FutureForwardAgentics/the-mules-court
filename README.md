@@ -108,16 +108,34 @@ The deck contains 16 cards representing characters from the Foundation series:
 
 - **React 19** + **TypeScript**
 - **Vite** for fast development
-- **Tailwind CSS** for styling
+- **Tailwind CSS 4** for styling
+- **PixiJS v8** for GPU-accelerated visual effects and animations
 - **Vitest** for testing
 - **WebAssembly** (via AssemblyScript) for game validation
+
+### Features
+
+- **Visual Effects**: GPU-accelerated particle effects, animations, and visual feedback using PixiJS v8
+  - Particle burst animations on card plays
+  - Elimination effects (expanding red circles)
+  - Protection effects (pulsing cyan shields for Shielded Mind)
+  - Auto-triggered visual feedback based on game state changes
+- **AI Opponent**: Play against computer-controlled opponents with strategic decision-making
+- **Real-time State Tracking**: Event recording system captures game history with synchronized state
+- **Type-Safe Architecture**: Full TypeScript coverage with strict type checking
+- **WebAssembly Performance**: Critical game validation logic runs at near-native speed
 
 ### Project Structure
 
 ```
 src/
 ├── components/     # React components (GameBoard, GameCard, PlayerArea)
+│   └── PixiEffects.tsx      # PixiJS canvas overlay for visual effects
+├── contexts/       # React contexts
+│   └── PixiEffectsContext.tsx  # Effect trigger management
 ├── hooks/          # Game logic (useGameState, useGameWithAI)
+├── game/           # Core game logic
+│   └── cardEffects.ts       # Card effect implementations (per-card functions)
 ├── types/          # TypeScript type definitions
 ├── data/           # Card definitions and deck creation
 ├── wasm/           # WASM loader and TypeScript bindings
@@ -230,6 +248,38 @@ npm run preview
 - Compiled WASM modules in `dist/build/`
 - Optimized JavaScript bundles
 - All assets and static files
+
+## Recent Updates
+
+### Graphics Enhancements (October 2025)
+
+- **PixiJS v8 Integration**: Added GPU-accelerated visual effects system
+  - Particle burst animations on card plays
+  - Elimination effect (expanding red circle with particle spray)
+  - Protection effect (pulsing cyan shield for Shielded Mind)
+  - PixiJS canvas overlay integrated with React component tree
+  - Auto-triggered effects based on game state changes
+
+### Architecture Improvements
+
+- **Card Effect Refactoring**: Migrated from monolithic switch statement to individual per-card effect functions
+  - `applyInformantEffect()` - Guess card type elimination
+  - `applyHanPritcherEffect()` / `applyBailChannisEffect()` - View hand
+  - `applyEblingMisEffect()` / `applyMagnificoEffect()` - Compare hands
+  - `applyShieldedMindEffect()` - Grant protection
+  - `applyBaytaDarellEffect()` / `applyToranDarellEffect()` - Discard and draw
+  - `applyMayorIndbur()` - Trade hands
+  - `applyFirstSpeakerEffect()` - Auto-discard logic
+  - `applyMuleEffect()` - Elimination on play
+  - Internal helper functions for shared logic (DRY principle)
+
+- **State Change Callback Pattern**: Event recording system now captures correct updated game state in real-time
+
+### Bug Fixes
+
+- **The Mule Elimination**: Fixed player elimination when The Mule card is played (was not eliminating correctly)
+- **Event Recording Synchronization**: Events now capture the correct game state after state updates
+- **TypeScript Strict Mode**: Resolved all strict type checking issues for improved type safety
 
 ## License
 
