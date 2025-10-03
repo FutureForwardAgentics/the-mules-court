@@ -111,7 +111,6 @@ The deck contains 16 cards representing characters from the Foundation series:
 - **Tailwind CSS** for styling
 - **Vitest** for testing
 - **WebAssembly** (via AssemblyScript) for game validation
-- **PixiJS v8** for rendering
 
 ### Project Structure
 
