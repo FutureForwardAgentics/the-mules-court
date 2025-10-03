@@ -167,7 +167,7 @@ All game logic validation is implemented in **pure TypeScript** (`src/game/gameV
 - **Forced Play Detection**: Automatically enforces First Speaker auto-discard rule
 - **Effect Resolution**: 11 individual card effect functions with shared helper utilities
 
-> **Note**: The project includes an AssemblyScript WASM module (`assembly/`) for experimental performance optimization, but the game currently runs entirely on TypeScript validation. WASM modules are built during development but not used in the runtime application.
+> **Note**: The project includes an experimental AssemblyScript WASM module (`assembly/`) for performance research, but the game currently runs entirely on TypeScript validation. WASM is **not built automatically**. To experiment with WASM compilation, run `npm run asbuild` manually.
 
 ### Building for Production
 
