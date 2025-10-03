@@ -106,8 +106,8 @@ async function inspectBrowser(url) {
   // Wait for React to render
   await page.waitForSelector('#root', { timeout: 10000 });
 
-  // Additional wait time for PixiJS to initialize
-  console.log(`Waiting ${options.wait}ms for PixiJS initialization...`);
+  // Additional wait time for BabylonJS to initialize
+  console.log(`Waiting ${options.wait}ms for BabylonJS initialization...`);
   await page.waitForTimeout(options.wait);
 
   const result = {};

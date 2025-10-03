@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { GameState } from '../types/game';
 import { PlayerArea } from './PlayerArea';
-import { PixiCardRenderer } from './PixiCardRenderer';
+import { BabylonCardRenderer } from './BabylonCardRenderer';
 
 interface GameBoardProps {
   gameState: GameState;
@@ -121,7 +121,7 @@ export function GameBoard({
                 <div className="text-xs text-gray-400 uppercase mb-2">The Deck</div>
                 {gameState.deck.length > 0 ? (
                   <div className="transition-transform hover:scale-105">
-                    <PixiCardRenderer
+                    <BabylonCardRenderer
                       cards={[gameState.deck[0]]}
                       size="small"
                       isRevealed={false}

@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **The Mule's Court** is a 2-4 player card game based on Isaac Asimov's Foundation universe, built as a single-page React application. The game is inspired by Love Letter, featuring deduction, risk, and elimination mechanics with 16 unique cards.
 
-**Rendering**: This project uses **PixiJS v8** for 2D graphics rendering via WebGL/WebGPU, providing high-performance card animations, visual effects, and interactive gameplay elements.
+**Rendering**: This project uses **BabylonJS** for graphics rendering via WebGL/WebGPU, providing high-performance card animations, visual effects, and interactive gameplay elements.
 
 ## Commands
 
@@ -95,25 +95,22 @@ Check if winner has enough tokens:
 - Gradient backgrounds and themed card colors per character
 - Responsive grid layout (1 column mobile, 2 columns desktop)
 
-### PixiJS Rendering Engine
+### BabylonJS Rendering Engine
 
-**PixiJS v8** is the 2D rendering library used for this project, providing GPU-accelerated graphics via WebGL and WebGPU.
+**BabylonJS** is the rendering library used for this project, providing GPU-accelerated graphics via WebGL and WebGPU.
 
-**API Documentation**: Comprehensive PixiJS v8 documentation for LLMs is available in:
-- `./public/llms.txt` - Curated links to specific documentation sections
-- `./public/llms-full.txt` - Complete API documentation in a single file
+**API Documentation**: Comprehensive BabylonJS documentation is available at https://doc.babylonjs.com/
 
-**Key PixiJS concepts for this project**:
-- **Application**: The main entry point that manages the renderer, stage, and ticker
-- **Scene Graph**: Container hierarchy for organizing visual elements (cards, players, effects)
-- **Sprites**: 2D image rendering for cards and game elements
-- **Textures**: GPU-managed images loaded via the Assets API
-- **Ticker**: Game loop for animations and updates
-- **Events**: Mouse/touch interaction system for card selection and dragging
-- **Graphics**: Vector drawing API for UI elements, borders, and effects
-- **Filters**: Post-processing effects (glow, shadows, blur) for visual polish
+**Key BabylonJS concepts for this project**:
+- **Engine**: The main entry point that manages the rendering pipeline
+- **Scene**: Contains all game objects, cameras, and lights
+- **GUI (AdvancedDynamicTexture)**: 2D UI system for rendering cards and effects
+- **Meshes**: 3D objects that can be used for visual elements
+- **ParticleSystem**: For visual effects like explosions, confetti, etc.
+- **Animations**: Built-in animation system for smooth transitions
+- **Color3/Color4**: Color management for materials and effects
 
-**Integration approach**: PixiJS should be integrated alongside React, not replace it. React manages game state and UI structure, while PixiJS handles the visual rendering layer. Use refs to mount the PixiJS Application canvas into the React component tree.
+**Integration approach**: BabylonJS is integrated alongside React. React manages game state and UI structure, while BabylonJS handles the visual rendering layer. Use refs to mount the BabylonJS Engine canvas into the React component tree.
 
 ## Important Patterns
 
@@ -149,7 +146,7 @@ This project has specialized agents in `.claude/agents/` for different developme
 
 **code-architect** - Use when:
 - Planning new game features (e.g., "Design architecture for multiplayer mode")
-- Planning PixiJS integration strategy
+- Planning BabylonJS integration strategy
 - Designing new card ability systems
 - Refactoring component structure
 - Establishing patterns for new modules
@@ -158,7 +155,7 @@ This project has specialized agents in `.claude/agents/` for different developme
 
 **frontend-developer** - Use when:
 - Building/modifying React components (GameBoard, PlayerArea, etc.)
-- Implementing PixiJS animations and visual effects
+- Implementing BabylonJS animations and visual effects
 - Working with Tailwind CSS styling
 - Optimizing React rendering performance
 - Implementing responsive layouts
@@ -185,7 +182,7 @@ This project has specialized agents in `.claude/agents/` for different developme
 - Test failures need investigation
 - Game state bugs occur
 - Performance issues arise
-- PixiJS rendering problems happen
+- BabylonJS rendering problems happen
 
 ### Quality Assurance
 
@@ -228,7 +225,7 @@ This project has specialized agents in `.claude/agents/` for different developme
 3. `test-writer-fixer` - Verify fix with tests
 4. `code-reviewer` - Review the changes
 
-**PixiJS Integration Flow:**
+**BabylonJS Integration Flow:**
 1. `code-architect` - Plan integration approach
 2. `frontend-developer` - Implement rendering layer
 3. `whimsy-injector` - Add animations/effects

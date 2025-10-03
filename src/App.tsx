@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { useGameWithAI } from "./hooks/useGameWithAI";
 import { GameBoard } from "./components/GameBoard";
 import { SessionViewer } from "./components/SessionViewer";
-import { PixiEffects } from "./components/PixiEffects";
+import { BabylonEffects } from "./components/BabylonEffects";
 import {
-  PixiEffectsProvider,
-  usePixiEffects,
-} from "./contexts/PixiEffectsContext";
+  BabylonEffectsProvider,
+  useBabylonEffects,
+} from "./contexts/BabylonEffectsContext";
+import { Color3 } from "@babylonjs/core";
 
 function App() {
   console.log("App component rendering (React+Tailwind version)");
@@ -16,14 +17,14 @@ function App() {
   console.log("Game state:", { gameStarted, playerCount });
 
   return (
-    <PixiEffectsProvider>
+    <BabylonEffectsProvider>
       <AppContent
         gameStarted={gameStarted}
         setGameStarted={setGameStarted}
         playerCount={playerCount}
         setPlayerCount={setPlayerCount}
       />
-    </PixiEffectsProvider>
+    </BabylonEffectsProvider>
   );
 }
 
@@ -161,8 +162,8 @@ function AppContent({
 function GameComponent({ playerCount }: { playerCount: number }) {
   console.log("GameComponent rendering with playerCount:", playerCount);
   const gameWithAI = useGameWithAI(playerCount, "player-0");
-  const { setApp, playCardEffect, eliminationEffect, protectionEffect, celebrationEffect } =
-    usePixiEffects();
+  const { setEngineAndScene, playCardEffect, eliminationEffect, protectionEffect, celebrationEffect } =
+    useBabylonEffects();
 
   console.log("Game state initialized:", {
     phase: gameWithAI.gameState.phase,
@@ -213,13 +214,13 @@ function GameComponent({ playerCount }: { playerCount: number }) {
   const enhancedPlayCard = (cardId: string) => {
     // Trigger particle effect at screen center
     // TODO: Add satisfying card-play sound effect
-    playCardEffect(window.innerWidth / 2, window.innerHeight / 2, 0xff6b6b);
+    playCardEffect(window.innerWidth / 2, window.innerHeight / 2, new Color3(1, 0.42, 0.42));
     gameWithAI.playCard(cardId);
   };
 
   return (
     <>
-      <PixiEffects onReady={setApp} />
+      <BabylonEffects onReady={setEngineAndScene} />
       <GameBoard
         gameState={gameWithAI.gameState}
         localPlayerId="player-0"

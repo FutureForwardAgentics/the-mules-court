@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Player } from '../types/game';
-import { PixiCardRenderer } from './PixiCardRenderer';
+import { BabylonCardRenderer } from './BabylonCardRenderer';
 
 interface PlayerAreaProps {
   player: Player;
@@ -76,7 +76,7 @@ export function PlayerArea({ player, isCurrentPlayer, isLocalPlayer, onCardClick
         </div>
         <div className="flex gap-2">
           {player.hand.length > 0 ? (
-            <PixiCardRenderer
+            <BabylonCardRenderer
               cards={player.hand}
               size="small"
               isRevealed={isLocalPlayer}
