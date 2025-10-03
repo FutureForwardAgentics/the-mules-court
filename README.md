@@ -106,12 +106,12 @@ The deck contains 16 cards representing characters from the Foundation series:
 
 ### Tech Stack
 
-- **React 19** + **TypeScript**
-- **Vite** for fast development
-- **Tailwind CSS 4** for styling
+- **React 19** + **TypeScript** with strict type checking
+- **Vite** for fast development and HMR
+- **Tailwind CSS 4** for modern utility-first styling
 - **PixiJS v8** for GPU-accelerated visual effects and animations
-- **Vitest** for testing
-- **WebAssembly** (via AssemblyScript) for game validation
+- **Vitest** + **Testing Library** for unit and integration testing
+- **IndexedDB** for game session recording and replay
 
 ### Features
 
@@ -121,133 +121,72 @@ The deck contains 16 cards representing characters from the Foundation series:
   - Protection effects (pulsing cyan shields for Shielded Mind)
   - Auto-triggered visual feedback based on game state changes
 - **AI Opponent**: Play against computer-controlled opponents with strategic decision-making
-- **Real-time State Tracking**: Event recording system captures game history with synchronized state
-- **Type-Safe Architecture**: Full TypeScript coverage with strict type checking
-- **WebAssembly Performance**: Critical game validation logic runs at near-native speed
+- **Game Session Recording**: Complete game history captured via IndexedDB for replay and analysis
+- **Type-Safe Architecture**: Full TypeScript coverage with strict type checking and validation
+- **Modular Card Effects**: Individual effect functions for each card type with shared helper utilities
 
 ### Project Structure
 
 ```
 src/
-├── components/     # React components (GameBoard, GameCard, PlayerArea)
-│   └── PixiEffects.tsx      # PixiJS canvas overlay for visual effects
-├── contexts/       # React contexts
+├── components/     # React UI components
+│   ├── GameBoard.tsx        # Main game board layout
+│   ├── GameCard.tsx         # Individual card component
+│   ├── PlayerArea.tsx       # Player hand and status display
+│   ├── CardInteractionModal.tsx  # Card target selection
+│   ├── PixiEffects.tsx      # PixiJS canvas overlay for visual effects
+│   └── SessionViewer.tsx    # Game session replay viewer
+├── contexts/       # React context providers
 │   └── PixiEffectsContext.tsx  # Effect trigger management
-├── hooks/          # Game logic (useGameState, useGameWithAI)
+├── hooks/          # Custom React hooks
+│   ├── useGameState.ts      # Core game state management
+│   └── useGameWithAI.ts     # Game state + AI integration
 ├── game/           # Core game logic
-│   └── cardEffects.ts       # Card effect implementations (per-card functions)
+│   ├── cardEffects.ts       # Card effect implementations (11 per-card functions)
+│   └── gameValidation.ts    # Card play and target validation
+├── services/       # External services
+│   └── gameDatabase.ts      # IndexedDB game session recording
+├── ai/             # AI opponent
+│   └── simpleAI.ts          # Strategic AI decision-making
+├── data/           # Static game data
+│   └── cards.ts             # Card definitions and deck creation
 ├── types/          # TypeScript type definitions
-├── data/           # Card definitions and deck creation
-├── wasm/           # WASM loader and TypeScript bindings
-├── ai/             # AI opponent logic
-├── simulation/     # Game simulation for testing
-└── test/           # Test setup and utilities
-
-assembly/           # AssemblyScript source (compiles to WASM)
-├── types.ts        # WASM type definitions
-├── validation.ts   # Game validation logic in WASM
-└── index.ts        # WASM module entry point
-
-build/              # Compiled WASM output
-├── release.wasm    # Optimized WASM module (6.1KB)
-├── release.js      # WASM JavaScript loader
-├── debug.wasm      # Debug WASM with source maps (14KB)
-└── *.d.ts          # TypeScript definitions
+│   └── game.ts              # Game state, card, player types
+├── simulation/     # Testing utilities
+│   └── gameSimulator.ts     # Full game simulation for testing
+└── test/           # Test configuration
+    └── setup.ts             # Vitest + Testing Library setup
 ```
 
-### WebAssembly Integration
+### Game Validation
 
-This project uses **WebAssembly** for performance-critical game validation logic. The WASM module is written in **AssemblyScript** (a TypeScript-like language that compiles to WASM).
+All game logic validation is implemented in **pure TypeScript** (`src/game/gameValidation.ts` and `src/game/cardEffects.ts`):
 
-#### Building WASM Modules
+- **Card Play Validation**: Ensures cards are played legally according to game rules
+- **Target Validation**: Validates player targeting for card effects (protection, elimination)
+- **Forced Play Detection**: Automatically enforces First Speaker auto-discard rule
+- **Effect Resolution**: 11 individual card effect functions with shared helper utilities
 
-```bash
-# Build both debug and release WASM modules
-npm run asbuild
-
-# Or build individually:
-npm run asbuild:debug    # Creates build/debug.wasm (14KB with source maps)
-npm run asbuild:release  # Creates build/release.wasm (6.1KB optimized)
-```
-
-The WASM module is **automatically built** when you run:
-- `npm run dev` - Builds WASM, then starts dev server
-- `npm run build` - Builds WASM, then builds production bundle
-- `npm test` - Builds WASM, then runs tests
-
-#### How WASM is Used
-
-**WASM is NOT a standalone executable** - it runs inside your web application:
-
-1. **AssemblyScript source** (`assembly/`) is compiled to `.wasm` binary
-2. **JavaScript loader** (`build/release.js`) is auto-generated
-3. **TypeScript bindings** (`src/wasm/loader.ts`) wrap WASM functions
-4. **React components** call TypeScript functions, which call WASM
-
-```typescript
-// Example: TypeScript calling WASM
-import { getCardValue, WASMCardType } from './wasm/loader';
-
-const value = getCardValue(WASMCardType.MULE);  // Returns 8
-```
-
-#### WASM Execution Flow
-
-```
-┌─────────────────┐
-│ AssemblyScript  │  assembly/validation.ts
-│ (TypeScript-    │  export function validateCardPlay() { ... }
-│  like syntax)   │
-└────────┬────────┘
-         │ npm run asbuild
-         ↓
-┌─────────────────┐
-│ WASM Binary     │  build/release.wasm (6.1KB)
-│ (WebAssembly)   │  Optimized machine code
-└────────┬────────┘
-         │
-         │ Loaded by JavaScript
-         ↓
-┌─────────────────┐
-│ TypeScript App  │  src/wasm/loader.ts
-│ (React/Vite)    │  const result = wasmModule.validateCardPlay(...)
-└─────────────────┘
-```
-
-#### WASM Functions Available
-
-| Function | Purpose | Returns |
-|----------|---------|---------|
-| `add(a, b)` | Test function (5 + 3) | `8` |
-| `getCardValue(type)` | Get card value by type | `1-8` |
-| `validateCardPlay(...)` | Validate if card play is legal | `ValidationResult` |
-| `checkFirstSpeakerAutoDiscard(...)` | Check auto-discard rule | `boolean` |
-| `validateTarget(...)` | Check if target is valid | `boolean` |
-
-#### Why Use WASM?
-
-- **Performance**: Game validation runs at near-native speed
-- **Type Safety**: AssemblyScript provides compile-time type checking
-- **Portability**: WASM runs identically across all browsers
-- **Future-proof**: Can move more logic to WASM as needed
+> **Note**: The project includes an AssemblyScript WASM module (`assembly/`) for experimental performance optimization, but the game currently runs entirely on TypeScript validation. WASM modules are built during development but not used in the runtime application.
 
 ### Building for Production
 
 ```bash
-# Full build (includes WASM compilation)
+# Build for production
 npm run build
 
-# Serve production build locally
-npm start
-
-# Or preview with Vite
+# Preview production build locally
 npm run preview
+
+# Or serve with simple HTTP server
+npm start
 ```
 
 **Production build includes:**
-- Compiled WASM modules in `dist/build/`
-- Optimized JavaScript bundles
-- All assets and static files
+- Optimized JavaScript bundles (React, PixiJS, game logic)
+- Compiled CSS (Tailwind)
+- Static assets (images, fonts)
+- Source maps for debugging
 
 ## Recent Updates
 
