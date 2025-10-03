@@ -25,13 +25,19 @@ export function applyCardEffect(
       break;
 
     case 'han-pritcher':
+      result = applyHanPritcherEffect(gameState, playerId, choice);
+      break;
+
     case 'bail-channis':
-      result = applyViewHandEffect(gameState, playerId, choice);
+      result = applyBailChannisEffect(gameState, playerId, choice);
       break;
 
     case 'ebling-mis':
+      result = applyEblingMisEffect(gameState, playerId, choice);
+      break;
+
     case 'magnifico':
-      result = applyCompareHandsEffect(gameState, playerId, choice);
+      result = applyMagnificoEffect(gameState, playerId, choice);
       break;
 
     case 'shielded-mind':
@@ -39,21 +45,22 @@ export function applyCardEffect(
       break;
 
     case 'bayta-darell':
+      result = applyBaytaDarellEffect(gameState, playerId, choice);
+      break;
+
     case 'toran-darell':
-      result = applyForceDiscardEffect(gameState, playerId, choice);
+      result = applyToranDarellEffect(gameState, playerId, choice);
       break;
 
     case 'mayor-indbur':
-      result = applyTradeHandsEffect(gameState, playerId, choice);
+      result = applyMayorIndbur(gameState, playerId, choice);
       break;
 
     case 'first-speaker':
-      // First Speaker has a passive effect (auto-discard with certain cards)
-      result = { gameState };
+      result = applyFirstSpeakerEffect(gameState, playerId);
       break;
 
     case 'mule':
-      // The Mule: Player who discards this card is eliminated
       result = applyMuleEffect(gameState, playerId);
       break;
 
@@ -101,9 +108,9 @@ function applyInformantEffect(
 }
 
 /**
- * Han Pritcher / Bail Channis: Look at another player's hand
+ * Shared helper: Look at another player's hand
  */
-function applyViewHandEffect(
+function _viewHandHelper(
   gameState: GameState,
   _playerId: string,
   choice?: CardInteractionChoice
@@ -125,9 +132,31 @@ function applyViewHandEffect(
 }
 
 /**
- * Ebling Mis / Magnifico: Compare hands. Lower value is eliminated.
+ * Han Pritcher: Look at another player's hand
  */
-function applyCompareHandsEffect(
+function applyHanPritcherEffect(
+  gameState: GameState,
+  playerId: string,
+  choice?: CardInteractionChoice
+): CardEffectResult {
+  return _viewHandHelper(gameState, playerId, choice);
+}
+
+/**
+ * Bail Channis: Look at another player's hand
+ */
+function applyBailChannisEffect(
+  gameState: GameState,
+  playerId: string,
+  choice?: CardInteractionChoice
+): CardEffectResult {
+  return _viewHandHelper(gameState, playerId, choice);
+}
+
+/**
+ * Shared helper: Compare hands. Lower value is eliminated.
+ */
+function _compareHandsHelper(
   gameState: GameState,
   playerId: string,
   choice?: CardInteractionChoice
@@ -175,6 +204,28 @@ function applyCompareHandsEffect(
 }
 
 /**
+ * Ebling Mis: Compare hands with another player. Lower value is eliminated.
+ */
+function applyEblingMisEffect(
+  gameState: GameState,
+  playerId: string,
+  choice?: CardInteractionChoice
+): CardEffectResult {
+  return _compareHandsHelper(gameState, playerId, choice);
+}
+
+/**
+ * Magnifico: Compare hands with another player. Lower value is eliminated.
+ */
+function applyMagnificoEffect(
+  gameState: GameState,
+  playerId: string,
+  choice?: CardInteractionChoice
+): CardEffectResult {
+  return _compareHandsHelper(gameState, playerId, choice);
+}
+
+/**
  * Shielded Mind: Protected until next turn
  */
 function applyShieldedMindEffect(
@@ -195,9 +246,9 @@ function applyShieldedMindEffect(
 }
 
 /**
- * Bayta/Toran Darell: Force a player to discard and draw
+ * Shared helper: Force a player to discard and draw
  */
-function applyForceDiscardEffect(
+function _forceDiscardHelper(
   gameState: GameState,
   _playerId: string,
   choice?: CardInteractionChoice
@@ -233,9 +284,31 @@ function applyForceDiscardEffect(
 }
 
 /**
+ * Bayta Darell: Choose any player to discard their hand and draw a new card
+ */
+function applyBaytaDarellEffect(
+  gameState: GameState,
+  playerId: string,
+  choice?: CardInteractionChoice
+): CardEffectResult {
+  return _forceDiscardHelper(gameState, playerId, choice);
+}
+
+/**
+ * Toran Darell: Choose any player to discard their hand and draw a new card
+ */
+function applyToranDarellEffect(
+  gameState: GameState,
+  playerId: string,
+  choice?: CardInteractionChoice
+): CardEffectResult {
+  return _forceDiscardHelper(gameState, playerId, choice);
+}
+
+/**
  * Mayor Indbur: Trade hands with another player
  */
-function applyTradeHandsEffect(
+function applyMayorIndbur(
   gameState: GameState,
   playerId: string,
   choice?: CardInteractionChoice
@@ -261,6 +334,21 @@ function applyTradeHandsEffect(
   return {
     gameState: { ...gameState, players: newPlayers },
     message: `Traded hands with ${targetPlayer.name}`,
+  };
+}
+
+/**
+ * First Speaker: No active effect (passive auto-discard handled elsewhere)
+ */
+function applyFirstSpeakerEffect(
+  gameState: GameState,
+  _playerId: string
+): CardEffectResult {
+  // First Speaker has only a passive effect (auto-discard with certain cards)
+  // This is handled by checkFirstSpeakerAutoDiscard and autoDiscardFirstSpeaker
+  return {
+    gameState,
+    message: 'The First Speaker remains hidden...',
   };
 }
 
