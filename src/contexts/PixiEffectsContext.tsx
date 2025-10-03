@@ -5,6 +5,7 @@ import {
   createCardPlayEffect,
   createEliminationEffect,
   createProtectionEffect,
+  createCelebrationEffect,
 } from '../components/PixiEffects';
 
 interface PixiEffectsContextType {
@@ -13,6 +14,7 @@ interface PixiEffectsContextType {
   playCardEffect: (x: number, y: number, color?: number) => void;
   eliminationEffect: (x: number, y: number) => void;
   protectionEffect: (x: number, y: number) => void;
+  celebrationEffect: (x: number, y: number) => void;
 }
 
 const PixiEffectsContext = createContext<PixiEffectsContextType | null>(null);
@@ -32,6 +34,10 @@ export function PixiEffectsProvider({ children }: { children: ReactNode }) {
     if (app) createProtectionEffect(app, x, y);
   };
 
+  const celebrationEffect = (x: number, y: number) => {
+    if (app) createCelebrationEffect(app, x, y);
+  };
+
   return (
     <PixiEffectsContext.Provider
       value={{
@@ -40,6 +46,7 @@ export function PixiEffectsProvider({ children }: { children: ReactNode }) {
         playCardEffect,
         eliminationEffect,
         protectionEffect,
+        celebrationEffect,
       }}
     >
       {children}

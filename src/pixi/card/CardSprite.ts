@@ -2,6 +2,7 @@ import { Container, Graphics, Text, TextStyle } from 'pixi.js';
 import type { Card } from '../../types/game';
 import type { CardSize, CardDimensions } from '../../types/pixi';
 import { parseTailwindGradient } from '../utils/colors';
+import { animateScale } from './CardAnimations';
 
 /**
  * Get pixel dimensions for each card size
@@ -293,17 +294,14 @@ export function makeCardInteractive(
   container.eventMode = 'static';
   container.cursor = 'pointer';
 
-  // Store original scale for reset
-  const originalScale = { x: container.scale.x, y: container.scale.y };
-
-  // Hover effect: Scale up
+  // Hover effect: Smooth scale up animation
   container.on('pointerover', () => {
-    container.scale.set(1.05);
+    animateScale(container, 1.05, 150);
   });
 
-  // Hover out: Reset scale
+  // Hover out: Smooth scale down animation
   container.on('pointerout', () => {
-    container.scale.set(originalScale.x, originalScale.y);
+    animateScale(container, 1, 150);
   });
 
   // Click: Fire callback
