@@ -36,6 +36,9 @@ export function PixiCardRenderer({
   useEffect(() => {
     if (!canvasRef.current) return;
 
+    // Track if this effect instance is still mounted
+    let isMounted = true;
+
     // Calculate canvas size based on cards and layout
     const { width, height } = calculateCanvasDimensions(cards, {
       size,
@@ -53,43 +56,69 @@ export function PixiCardRenderer({
 
     // Create PixiJS Application
     const app = new Application();
+    let isInitialized = false;
 
     // Initialize the app
     (async () => {
-      await app.init({
-        width,
-        height,
-        backgroundAlpha: 0,
-        antialias: true,
-        resolution: window.devicePixelRatio || 1,
-        autoDensity: true,
-      });
+      try {
+        await app.init({
+          width,
+          height,
+          backgroundAlpha: 0,
+          antialias: true,
+          resolution: window.devicePixelRatio || 1,
+          autoDensity: true,
+        });
 
-      // Add canvas to DOM
-      if (canvasRef.current && app.canvas) {
-        // Clear any existing canvases
-        canvasRef.current.innerHTML = '';
-        canvasRef.current.appendChild(app.canvas as HTMLCanvasElement);
+        // Check if component is still mounted
+        if (!isMounted) {
+          // Component unmounted during init, clean up immediately
+          try {
+            app.destroy(true, { children: true });
+          } catch (e) {
+            // Silently catch cleanup errors during unmount
+          }
+          return;
+        }
+
+        isInitialized = true;
+
+        // Add canvas to DOM
+        if (canvasRef.current && app.canvas) {
+          // Clear any existing canvases
+          canvasRef.current.innerHTML = '';
+          canvasRef.current.appendChild(app.canvas as HTMLCanvasElement);
+        }
+
+        // Store app reference
+        appRef.current = app;
+
+        // Render cards
+        renderCards(app, cards, {
+          size,
+          isRevealed,
+          isInteractive,
+          layout,
+          spacing,
+          onCardClick,
+        });
+      } catch (error) {
+        console.error('PixiJS initialization error:', error);
       }
-
-      // Store app reference
-      appRef.current = app;
-
-      // Render cards
-      renderCards(app, cards, {
-        size,
-        isRevealed,
-        isInteractive,
-        layout,
-        spacing,
-        onCardClick,
-      });
     })();
 
     // Cleanup
     return () => {
-      if (appRef.current) {
-        appRef.current.destroy(true, { children: true });
+      isMounted = false;
+
+      // Only destroy if initialization completed
+      if (appRef.current && isInitialized) {
+        try {
+          appRef.current.destroy(true, { children: true });
+        } catch (error) {
+          // Silently catch destroy errors - PixiJS v8 can have cleanup issues
+          console.warn('PixiJS cleanup warning:', error);
+        }
         appRef.current = null;
       }
     };
