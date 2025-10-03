@@ -77,15 +77,44 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
           console.log(`🤖 AI ${currentPlayer.name} executing:`, decision);
 
           if (decision.action === 'draw') {
+            // Draw card
             pendingEventRef.current = {
               type: 'draw_card',
               playerId: currentPlayer.id,
               data: { action: 'draw' },
             };
             gameState.drawCard();
-            // Clear thinking after draw
-            setIsAIThinking(false);
+
+            // Continue AI's turn - make play decision after drawing
+            setTimeout(() => {
+              const playDecision = SimpleAI.decideAction(gameState.gameState, currentPlayer.id);
+              console.log(`🤖 AI ${currentPlayer.name} play decision:`, playDecision);
+
+              if (playDecision?.action === 'play' && playDecision.cardId) {
+                pendingEventRef.current = {
+                  type: 'play_card',
+                  playerId: currentPlayer.id,
+                  data: { cardId: playDecision.cardId, choice: playDecision.choice },
+                };
+                gameState.playCard(playDecision.cardId, playDecision.choice);
+
+                // Auto end turn after playing
+                setTimeout(() => {
+                  pendingEventRef.current = {
+                    type: 'end_turn',
+                    playerId: currentPlayer.id,
+                    data: {},
+                  };
+                  gameState.endTurn();
+                  setIsAIThinking(false);
+                }, 300);
+              } else {
+                console.log('AI has no valid play decision, ending turn');
+                setIsAIThinking(false);
+              }
+            }, 300);
           } else if (decision.action === 'play' && decision.cardId) {
+            // AI already has 2 cards (draw phase was skipped or already happened)
             pendingEventRef.current = {
               type: 'play_card',
               playerId: currentPlayer.id,
@@ -104,6 +133,7 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
               setIsAIThinking(false);
             }, 300);
           } else {
+            console.log('AI has no valid decision');
             setIsAIThinking(false);
           }
         }, delay);
