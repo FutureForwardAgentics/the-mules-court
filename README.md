@@ -106,28 +106,119 @@ The deck contains 16 cards representing characters from the Foundation series:
 
 ### Tech Stack
 
-- **React 19** + **TypeScript**
-- **Vite** for fast development
-- **Tailwind CSS** for styling
-- **Vitest** for testing
+- **React 19** + **TypeScript** with strict type checking
+- **Vite** for fast development and HMR
+- **Tailwind CSS 4** for modern utility-first styling
+- **PixiJS v8** for GPU-accelerated visual effects and animations
+- **Vitest** + **Testing Library** for unit and integration testing
+- **IndexedDB** for game session recording and replay
+
+### Features
+
+- **Visual Effects**: GPU-accelerated particle effects, animations, and visual feedback using PixiJS v8
+  - Particle burst animations on card plays
+  - Elimination effects (expanding red circles)
+  - Protection effects (pulsing cyan shields for Shielded Mind)
+  - Auto-triggered visual feedback based on game state changes
+- **AI Opponent**: Play against computer-controlled opponents with strategic decision-making
+- **Game Session Recording**: Complete game history captured via IndexedDB for replay and analysis
+- **Type-Safe Architecture**: Full TypeScript coverage with strict type checking and validation
+- **Modular Card Effects**: Individual effect functions for each card type with shared helper utilities
 
 ### Project Structure
 
 ```
 src/
-├── components/     # React components (GameBoard, GameCard, PlayerArea)
-├── hooks/          # Game logic (useGameState)
+├── components/     # React UI components
+│   ├── GameBoard.tsx        # Main game board layout
+│   ├── GameCard.tsx         # Individual card component
+│   ├── PlayerArea.tsx       # Player hand and status display
+│   ├── CardInteractionModal.tsx  # Card target selection
+│   ├── PixiEffects.tsx      # PixiJS canvas overlay for visual effects
+│   └── SessionViewer.tsx    # Game session replay viewer
+├── contexts/       # React context providers
+│   └── PixiEffectsContext.tsx  # Effect trigger management
+├── hooks/          # Custom React hooks
+│   ├── useGameState.ts      # Core game state management
+│   └── useGameWithAI.ts     # Game state + AI integration
+├── game/           # Core game logic
+│   ├── cardEffects.ts       # Card effect implementations (11 per-card functions)
+│   └── gameValidation.ts    # Card play and target validation
+├── services/       # External services
+│   └── gameDatabase.ts      # IndexedDB game session recording
+├── ai/             # AI opponent
+│   └── simpleAI.ts          # Strategic AI decision-making
+├── data/           # Static game data
+│   └── cards.ts             # Card definitions and deck creation
 ├── types/          # TypeScript type definitions
-├── data/           # Card definitions and deck creation
-└── test/           # Test setup and utilities
+│   └── game.ts              # Game state, card, player types
+├── simulation/     # Testing utilities
+│   └── gameSimulator.ts     # Full game simulation for testing
+└── test/           # Test configuration
+    └── setup.ts             # Vitest + Testing Library setup
 ```
+
+### Game Validation
+
+All game logic validation is implemented in **pure TypeScript** (`src/game/gameValidation.ts` and `src/game/cardEffects.ts`):
+
+- **Card Play Validation**: Ensures cards are played legally according to game rules
+- **Target Validation**: Validates player targeting for card effects (protection, elimination)
+- **Forced Play Detection**: Automatically enforces First Speaker auto-discard rule
+- **Effect Resolution**: 11 individual card effect functions with shared helper utilities
+
+> **Note**: The project includes an experimental AssemblyScript WASM module (`assembly/`) for performance research, but the game currently runs entirely on TypeScript validation. WASM is **not built automatically**. To experiment with WASM compilation, run `npm run asbuild` manually.
 
 ### Building for Production
 
 ```bash
+# Build for production
 npm run build
+
+# Preview production build locally
 npm run preview
+
+# Or serve with simple HTTP server
+npm start
 ```
+
+**Production build includes:**
+- Optimized JavaScript bundles (React, PixiJS, game logic)
+- Compiled CSS (Tailwind)
+- Static assets (images, fonts)
+- Source maps for debugging
+
+## Recent Updates
+
+### Graphics Enhancements (October 2025)
+
+- **PixiJS v8 Integration**: Added GPU-accelerated visual effects system
+  - Particle burst animations on card plays
+  - Elimination effect (expanding red circle with particle spray)
+  - Protection effect (pulsing cyan shield for Shielded Mind)
+  - PixiJS canvas overlay integrated with React component tree
+  - Auto-triggered effects based on game state changes
+
+### Architecture Improvements
+
+- **Card Effect Refactoring**: Migrated from monolithic switch statement to individual per-card effect functions
+  - `applyInformantEffect()` - Guess card type elimination
+  - `applyHanPritcherEffect()` / `applyBailChannisEffect()` - View hand
+  - `applyEblingMisEffect()` / `applyMagnificoEffect()` - Compare hands
+  - `applyShieldedMindEffect()` - Grant protection
+  - `applyBaytaDarellEffect()` / `applyToranDarellEffect()` - Discard and draw
+  - `applyMayorIndbur()` - Trade hands
+  - `applyFirstSpeakerEffect()` - Auto-discard logic
+  - `applyMuleEffect()` - Elimination on play
+  - Internal helper functions for shared logic (DRY principle)
+
+- **State Change Callback Pattern**: Event recording system now captures correct updated game state in real-time
+
+### Bug Fixes
+
+- **The Mule Elimination**: Fixed player elimination when The Mule card is played (was not eliminating correctly)
+- **Event Recording Synchronization**: Events now capture the correct game state after state updates
+- **TypeScript Strict Mode**: Resolved all strict type checking issues for improved type safety
 
 ## License
 

@@ -12,7 +12,13 @@
       "Bash(lsof:*)",
       "Bash(timeout 3 npm run dev)",
       "Bash(echo:*)",
-      "Read(//private/tmp/**)"
+      "Read(//private/tmp/**)",
+      "Bash(npx:*)",
+      "Bash(npm run:*)",
+      "Bash(/dev/null)",
+      "Bash(grep:*)",
+      "Bash(git checkout:*)",
+      "Bash(npm uninstall:*)"
     ],
     "deny": [],
     "ask": [
