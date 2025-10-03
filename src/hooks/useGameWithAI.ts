@@ -2,12 +2,31 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useGameState } from './useGameState';
 import { gameDB, type GameSession } from '../services/gameDatabase';
 import { SimpleAI } from '../ai/simpleAI';
+import type { GameState } from '../types/game';
 
 export function useGameWithAI(playerCount: number, humanPlayerId: string = 'player-0') {
-  const gameState = useGameState(playerCount);
   const [session, setSession] = useState<GameSession | null>(null);
   const [isAIThinking, setIsAIThinking] = useState(false);
   const aiTimeoutRef = useRef<number | null>(null);
+  const pendingEventRef = useRef<{
+    type: 'game_start' | 'draw_card' | 'play_card' | 'end_turn' | 'round_end' | 'game_end';
+    playerId: string;
+    data: any;
+  } | null>(null);
+
+  // State change callback for recording
+  const handleStateChange = useCallback((newState: GameState) => {
+    if (pendingEventRef.current && session) {
+      gameDB.recordEvent({
+        sessionId: session.id,
+        ...pendingEventRef.current,
+        gameState: newState,
+      });
+      pendingEventRef.current = null;
+    }
+  }, [session]);
+
+  const gameState = useGameState(playerCount, handleStateChange);
 
   // Initialize game session
   useEffect(() => {
@@ -54,50 +73,34 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
       if (decision) {
         const delay = SimpleAI.getActionDelay();
 
-        aiTimeoutRef.current = window.setTimeout(async () => {
+        aiTimeoutRef.current = window.setTimeout(() => {
           console.log(`🤖 AI ${currentPlayer.name} executing:`, decision);
 
           if (decision.action === 'draw') {
+            pendingEventRef.current = {
+              type: 'draw_card',
+              playerId: currentPlayer.id,
+              data: { action: 'draw' },
+            };
             gameState.drawCard();
-
-            if (session) {
-              await gameDB.recordEvent({
-                sessionId: session.id,
-                type: 'draw_card',
-                playerId: currentPlayer.id,
-                data: { action: 'draw' },
-                gameState: gameState.gameState,
-              });
-            }
             // Clear thinking after draw
             setIsAIThinking(false);
           } else if (decision.action === 'play' && decision.cardId) {
+            pendingEventRef.current = {
+              type: 'play_card',
+              playerId: currentPlayer.id,
+              data: { cardId: decision.cardId, choice: decision.choice },
+            };
             gameState.playCard(decision.cardId, decision.choice);
 
-            if (session) {
-              await gameDB.recordEvent({
-                sessionId: session.id,
-                type: 'play_card',
-                playerId: currentPlayer.id,
-                data: { cardId: decision.cardId, choice: decision.choice },
-                gameState: gameState.gameState,
-              });
-            }
-
             // Auto end turn after playing with proper event recording
-            setTimeout(async () => {
+            setTimeout(() => {
+              pendingEventRef.current = {
+                type: 'end_turn',
+                playerId: currentPlayer.id,
+                data: {},
+              };
               gameState.endTurn();
-
-              if (session) {
-                await gameDB.recordEvent({
-                  sessionId: session.id,
-                  type: 'end_turn',
-                  playerId: currentPlayer.id,
-                  data: {},
-                  gameState: gameState.gameState,
-                });
-              }
-
               setIsAIThinking(false);
             }, 300);
           } else {
@@ -130,63 +133,43 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
   ]);
 
   // Enhanced draw card with recording
-  const drawCardWithRecording = useCallback(async () => {
+  const drawCardWithRecording = useCallback(() => {
     const currentPlayer = gameState.gameState.players[gameState.gameState.currentPlayerIndex];
+
+    pendingEventRef.current = {
+      type: 'draw_card',
+      playerId: currentPlayer.id,
+      data: { action: 'draw' },
+    };
 
     gameState.drawCard();
-
-    if (session) {
-      await gameDB.recordEvent({
-        sessionId: session.id,
-        type: 'draw_card',
-        playerId: currentPlayer.id,
-        data: { action: 'draw' },
-        gameState: gameState.gameState,
-      });
-    }
-  }, [gameState, session]);
+  }, [gameState]);
 
   // Enhanced play card with recording
-  const playCardWithRecording = useCallback(async (cardId: string, choice?: any) => {
+  const playCardWithRecording = useCallback((cardId: string, choice?: any) => {
     const currentPlayer = gameState.gameState.players[gameState.gameState.currentPlayerIndex];
+
+    pendingEventRef.current = {
+      type: 'play_card',
+      playerId: currentPlayer.id,
+      data: { cardId, choice },
+    };
 
     gameState.playCard(cardId, choice);
-
-    if (session) {
-      await gameDB.recordEvent({
-        sessionId: session.id,
-        type: 'play_card',
-        playerId: currentPlayer.id,
-        data: { cardId, choice },
-        gameState: gameState.gameState,
-      });
-    }
-  }, [gameState, session]);
+  }, [gameState]);
 
   // Enhanced end turn with recording
-  const endTurnWithRecording = useCallback(async () => {
+  const endTurnWithRecording = useCallback(() => {
     const currentPlayer = gameState.gameState.players[gameState.gameState.currentPlayerIndex];
 
+    pendingEventRef.current = {
+      type: 'end_turn',
+      playerId: currentPlayer.id,
+      data: {},
+    };
+
     gameState.endTurn();
-
-    if (session) {
-      await gameDB.recordEvent({
-        sessionId: session.id,
-        type: 'end_turn',
-        playerId: currentPlayer.id,
-        data: {},
-        gameState: gameState.gameState,
-      });
-
-      // Check if game ended
-      if (gameState.gameState.phase === 'game-end') {
-        const winner = gameState.gameState.players.find(
-          p => p.devotionTokens >= gameState.gameState.tokensToWin
-        );
-        await gameDB.endSession(session.id, winner?.id);
-      }
-    }
-  }, [gameState, session]);
+  }, [gameState]);
 
   return {
     gameState: gameState.gameState,

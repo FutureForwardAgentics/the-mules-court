@@ -53,8 +53,8 @@ export function applyCardEffect(
       break;
 
     case 'mule':
-      // The Mule has no play effect, only discard penalty
-      result = { gameState };
+      // The Mule: Player who discards this card is eliminated
+      result = applyMuleEffect(gameState, playerId);
       break;
 
     default:
@@ -261,6 +261,27 @@ function applyTradeHandsEffect(
   return {
     gameState: { ...gameState, players: newPlayers },
     message: `Traded hands with ${targetPlayer.name}`,
+  };
+}
+
+/**
+ * The Mule: Player who discards this card is eliminated
+ */
+function applyMuleEffect(
+  gameState: GameState,
+  playerId: string
+): CardEffectResult {
+  const newPlayers = [...gameState.players];
+  const playerIdx = newPlayers.findIndex(p => p.id === playerId);
+
+  if (playerIdx !== -1) {
+    newPlayers[playerIdx].isEliminated = true;
+  }
+
+  return {
+    gameState: { ...gameState, players: newPlayers },
+    message: 'You revealed yourself as The Mule and are eliminated!',
+    eliminatedPlayers: [playerId],
   };
 }
 

@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameWithAI } from './hooks/useGameWithAI';
 import { GameBoard } from './components/GameBoard';
 import { SessionViewer } from './components/SessionViewer';
+import { PixiEffects } from './components/PixiEffects';
+import { PixiEffectsProvider, usePixiEffects } from './contexts/PixiEffectsContext';
 
 function App() {
   console.log('App component rendering (React+Tailwind version)');
@@ -10,6 +12,19 @@ function App() {
 
   console.log('Game state:', { gameStarted, playerCount });
 
+  return (
+    <PixiEffectsProvider>
+      <AppContent gameStarted={gameStarted} setGameStarted={setGameStarted} playerCount={playerCount} setPlayerCount={setPlayerCount} />
+    </PixiEffectsProvider>
+  );
+}
+
+function AppContent({ gameStarted, setGameStarted, playerCount, setPlayerCount }: {
+  gameStarted: boolean;
+  setGameStarted: (value: boolean) => void;
+  playerCount: number;
+  setPlayerCount: (value: number) => void;
+}) {
   if (!gameStarted) {
     console.log('Rendering start screen');
     return (
@@ -78,6 +93,7 @@ function App() {
 function GameComponent({ playerCount }: { playerCount: number }) {
   console.log('GameComponent rendering with playerCount:', playerCount);
   const gameWithAI = useGameWithAI(playerCount, 'player-0');
+  const { setApp, playCardEffect, eliminationEffect, protectionEffect } = usePixiEffects();
 
   console.log('Game state initialized:', {
     phase: gameWithAI.gameState.phase,
@@ -87,12 +103,50 @@ function GameComponent({ playerCount }: { playerCount: number }) {
     aiThinking: gameWithAI.isAIThinking,
   });
 
+  // Track previous game state for visual effects
+  const prevGameStateRef = useRef(gameWithAI.gameState);
+
+  // Trigger visual effects based on game state changes
+  useEffect(() => {
+    const prevState = prevGameStateRef.current;
+    const currentState = gameWithAI.gameState;
+
+    // Check for eliminations
+    currentState.players.forEach((player, idx) => {
+      const prevPlayer = prevState.players[idx];
+      if (player.isEliminated && !prevPlayer?.isEliminated) {
+        // Player was just eliminated - trigger effect at random screen position
+        const x = window.innerWidth / 2 + (Math.random() - 0.5) * 400;
+        const y = window.innerHeight / 2 + (Math.random() - 0.5) * 300;
+        eliminationEffect(x, y);
+      }
+
+      // Check for protection
+      if (player.isProtected && !prevPlayer?.isProtected) {
+        // Player just gained protection
+        const x = window.innerWidth / 2 + (Math.random() - 0.5) * 400;
+        const y = window.innerHeight / 2 + (Math.random() - 0.5) * 300;
+        protectionEffect(x, y);
+      }
+    });
+
+    prevGameStateRef.current = currentState;
+  }, [gameWithAI.gameState, eliminationEffect, protectionEffect]);
+
+  // Trigger visual effects based on game actions
+  const enhancedPlayCard = (cardId: string) => {
+    // Trigger particle effect at screen center
+    playCardEffect(window.innerWidth / 2, window.innerHeight / 2, 0xff6b6b);
+    gameWithAI.playCard(cardId);
+  };
+
   return (
     <>
+      <PixiEffects onReady={setApp} />
       <GameBoard
         gameState={gameWithAI.gameState}
         localPlayerId="player-0"
-        onCardClick={gameWithAI.playCard}
+        onCardClick={enhancedPlayCard}
         onDrawCard={gameWithAI.drawCard}
         onEndTurn={gameWithAI.endTurn}
         onStartNewRound={gameWithAI.startNewRound}

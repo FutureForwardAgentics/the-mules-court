@@ -5,7 +5,10 @@ import { applyCardEffect, checkFirstSpeakerAutoDiscard, autoDiscardFirstSpeaker 
 import type { CardInteractionChoice } from '../components/CardInteractionModal';
 import { validateCardPlay } from '../game/gameValidation';
 
-export function useGameState(playerCount: number) {
+export function useGameState(
+  playerCount: number,
+  onStateChange?: (newState: GameState) => void
+) {
   const [gameState, setGameState] = useState<GameState>(() => initializeGame(playerCount));
 
   const drawCard = useCallback(() => {
@@ -32,9 +35,10 @@ export function useGameState(playerCount: number) {
         updatedState = autoDiscardFirstSpeaker(updatedState, currentPlayer.id);
       }
 
+      if (onStateChange) onStateChange(updatedState);
       return updatedState;
     });
-  }, []);
+  }, [onStateChange]);
 
   const playCard = useCallback((cardId: string, choice?: CardInteractionChoice) => {
     setGameState(prev => {
@@ -90,9 +94,10 @@ export function useGameState(playerCount: number) {
         updatedState = autoDiscardFirstSpeaker(updatedState, playerAfterEffect.id);
       }
 
+      if (onStateChange) onStateChange(updatedState);
       return updatedState;
     });
-  }, []);
+  }, [onStateChange]);
 
   const endTurn = useCallback(() => {
     setGameState(prev => {
@@ -100,12 +105,16 @@ export function useGameState(playerCount: number) {
 
       // Check win conditions
       if (activePlayers.length === 1) {
-        return handleRoundEnd(prev, activePlayers[0].id);
+        const newState = handleRoundEnd(prev, activePlayers[0].id);
+        if (onStateChange) onStateChange(newState);
+        return newState;
       }
 
       if (prev.deck.length === 0) {
         const winner = determineWinner(activePlayers);
-        return handleRoundEnd(prev, winner.id);
+        const newState = handleRoundEnd(prev, winner.id);
+        if (onStateChange) onStateChange(newState);
+        return newState;
       }
 
       // Move to next player
@@ -114,24 +123,30 @@ export function useGameState(playerCount: number) {
         nextIndex = (nextIndex + 1) % prev.players.length;
       }
 
-      return {
+      const newState: GameState = {
         ...prev,
         currentPlayerIndex: nextIndex,
-        phase: 'draw'
+        phase: 'draw' as const
       };
+      if (onStateChange) onStateChange(newState);
+      return newState;
     });
-  }, []);
+  }, [onStateChange]);
 
   const startNewRound = useCallback(() => {
     setGameState(prev => {
       const winner = prev.players.find(p => p.devotionTokens >= prev.tokensToWin);
       if (winner) {
-        return { ...prev, phase: 'game-end' };
+        const newState = { ...prev, phase: 'game-end' as const };
+        if (onStateChange) onStateChange(newState);
+        return newState;
       }
 
-      return initializeRound(prev.players, prev.tokensToWin);
+      const newState = initializeRound(prev.players, prev.tokensToWin);
+      if (onStateChange) onStateChange(newState);
+      return newState;
     });
-  }, []);
+  }, [onStateChange]);
 
   return {
     gameState,
