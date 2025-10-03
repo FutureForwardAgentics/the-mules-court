@@ -110,24 +110,127 @@ The deck contains 16 cards representing characters from the Foundation series:
 - **Vite** for fast development
 - **Tailwind CSS** for styling
 - **Vitest** for testing
+- **WebAssembly** (via AssemblyScript) for game validation
+- **PixiJS v8** for rendering
 
 ### Project Structure
 
 ```
 src/
 ├── components/     # React components (GameBoard, GameCard, PlayerArea)
-├── hooks/          # Game logic (useGameState)
+├── hooks/          # Game logic (useGameState, useGameWithAI)
 ├── types/          # TypeScript type definitions
 ├── data/           # Card definitions and deck creation
+├── wasm/           # WASM loader and TypeScript bindings
+├── ai/             # AI opponent logic
+├── simulation/     # Game simulation for testing
 └── test/           # Test setup and utilities
+
+assembly/           # AssemblyScript source (compiles to WASM)
+├── types.ts        # WASM type definitions
+├── validation.ts   # Game validation logic in WASM
+└── index.ts        # WASM module entry point
+
+build/              # Compiled WASM output
+├── release.wasm    # Optimized WASM module (6.1KB)
+├── release.js      # WASM JavaScript loader
+├── debug.wasm      # Debug WASM with source maps (14KB)
+└── *.d.ts          # TypeScript definitions
 ```
+
+### WebAssembly Integration
+
+This project uses **WebAssembly** for performance-critical game validation logic. The WASM module is written in **AssemblyScript** (a TypeScript-like language that compiles to WASM).
+
+#### Building WASM Modules
+
+```bash
+# Build both debug and release WASM modules
+npm run asbuild
+
+# Or build individually:
+npm run asbuild:debug    # Creates build/debug.wasm (14KB with source maps)
+npm run asbuild:release  # Creates build/release.wasm (6.1KB optimized)
+```
+
+The WASM module is **automatically built** when you run:
+- `npm run dev` - Builds WASM, then starts dev server
+- `npm run build` - Builds WASM, then builds production bundle
+- `npm test` - Builds WASM, then runs tests
+
+#### How WASM is Used
+
+**WASM is NOT a standalone executable** - it runs inside your web application:
+
+1. **AssemblyScript source** (`assembly/`) is compiled to `.wasm` binary
+2. **JavaScript loader** (`build/release.js`) is auto-generated
+3. **TypeScript bindings** (`src/wasm/loader.ts`) wrap WASM functions
+4. **React components** call TypeScript functions, which call WASM
+
+```typescript
+// Example: TypeScript calling WASM
+import { getCardValue, WASMCardType } from './wasm/loader';
+
+const value = getCardValue(WASMCardType.MULE);  // Returns 8
+```
+
+#### WASM Execution Flow
+
+```
+┌─────────────────┐
+│ AssemblyScript  │  assembly/validation.ts
+│ (TypeScript-    │  export function validateCardPlay() { ... }
+│  like syntax)   │
+└────────┬────────┘
+         │ npm run asbuild
+         ↓
+┌─────────────────┐
+│ WASM Binary     │  build/release.wasm (6.1KB)
+│ (WebAssembly)   │  Optimized machine code
+└────────┬────────┘
+         │
+         │ Loaded by JavaScript
+         ↓
+┌─────────────────┐
+│ TypeScript App  │  src/wasm/loader.ts
+│ (React/Vite)    │  const result = wasmModule.validateCardPlay(...)
+└─────────────────┘
+```
+
+#### WASM Functions Available
+
+| Function | Purpose | Returns |
+|----------|---------|---------|
+| `add(a, b)` | Test function (5 + 3) | `8` |
+| `getCardValue(type)` | Get card value by type | `1-8` |
+| `validateCardPlay(...)` | Validate if card play is legal | `ValidationResult` |
+| `checkFirstSpeakerAutoDiscard(...)` | Check auto-discard rule | `boolean` |
+| `validateTarget(...)` | Check if target is valid | `boolean` |
+
+#### Why Use WASM?
+
+- **Performance**: Game validation runs at near-native speed
+- **Type Safety**: AssemblyScript provides compile-time type checking
+- **Portability**: WASM runs identically across all browsers
+- **Future-proof**: Can move more logic to WASM as needed
 
 ### Building for Production
 
 ```bash
+# Full build (includes WASM compilation)
 npm run build
+
+# Serve production build locally
+npm start
+
+# Or preview with Vite
 npm run preview
 ```
+
+**Production build includes:**
+- Compiled WASM modules in `dist/build/`
+- Optimized JavaScript bundles
+- All assets and static files
 
 ## License
 
