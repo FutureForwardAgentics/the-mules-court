@@ -84,9 +84,20 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
               });
             }
 
-            // Auto end turn after playing
-            setTimeout(() => {
+            // Auto end turn after playing with proper event recording
+            setTimeout(async () => {
               gameState.endTurn();
+
+              if (session) {
+                await gameDB.recordEvent({
+                  sessionId: session.id,
+                  type: 'end_turn',
+                  playerId: currentPlayer.id,
+                  data: {},
+                  gameState: gameState.gameState,
+                });
+              }
+
               setIsAIThinking(false);
             }, 300);
           } else {
@@ -106,8 +117,17 @@ export function useGameWithAI(playerCount: number, humanPlayerId: string = 'play
         aiTimeoutRef.current = null;
       }
     };
-    // Only re-run when player index or phase changes, not full game state
-  }, [gameState.gameState.currentPlayerIndex, gameState.gameState.phase, humanPlayerId, isAIThinking, session]);
+    // Re-run when key game state changes
+  }, [
+    gameState.gameState.currentPlayerIndex,
+    gameState.gameState.phase,
+    humanPlayerId,
+    isAIThinking,
+    session,
+    gameState.drawCard,
+    gameState.playCard,
+    gameState.endTurn
+  ]);
 
   // Enhanced draw card with recording
   const drawCardWithRecording = useCallback(async () => {
