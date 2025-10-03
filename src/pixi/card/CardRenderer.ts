@@ -32,7 +32,7 @@ export function renderCards(
   }
 
   // Create card sprites
-  const cardContainers: Container[] = cards.map((card, index) => {
+  const cardContainers: Container[] = cards.map((card) => {
     const container = options.isRevealed
       ? createCardSprite(card, options.size)
       : createCardBackSprite(options.size);
@@ -143,12 +143,13 @@ export function calculateCanvasDimensions(
         height: cards.length * dim.height + (cards.length - 1) * options.spacing,
       };
 
-    case 'stack':
+    case 'stack': {
       // Stacked cards only add a small offset per card
       const stackOffset = 2;
       return {
         width: dim.width + (cards.length - 1) * stackOffset,
         height: dim.height + (cards.length - 1) * stackOffset,
       };
+    }
   }
 }

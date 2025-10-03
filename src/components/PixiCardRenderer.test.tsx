@@ -113,13 +113,13 @@ describe('PixiCardRenderer', () => {
       expect(container.firstChild).toBeInTheDocument();
     });
 
-    it('should call onCardClick when card is clicked (Stage 2)', () => {
-      let clickedCardId = '';
+    it('should accept onCardClick callback for interaction (Stage 2)', () => {
       const handleClick = (cardId: string) => {
-        clickedCardId = cardId;
+        // In browser, PixiJS will call this with the card's ID
+        console.log('Card clicked:', cardId);
       };
 
-      render(
+      const { container } = render(
         <PixiCardRenderer
           cards={[mockCard]}
           size="medium"
@@ -129,8 +129,9 @@ describe('PixiCardRenderer', () => {
         />
       );
 
-      // Note: Actual click testing requires PixiJS to render in browser
-      // This test verifies the callback is passed through
+      // Note: Actual click simulation requires PixiJS rendering in browser
+      // This test verifies the callback prop is accepted
+      expect(container.firstChild).toBeInTheDocument();
       expect(handleClick).toBeDefined();
     });
   });
