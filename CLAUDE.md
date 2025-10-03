@@ -140,3 +140,96 @@ The `isProtected` flag is cleared at the start of each player's turn (except for
 - **Deck composition**: 16 cards total (5 Informants + 11 unique characters)
 - **Card values**: 1-8 (Informant to The Mule)
 - **Tiebreaker**: If deck empties, highest card value wins; ties broken by discard pile total
+
+## Agent Usage Guidelines
+
+This project has specialized agents in `.claude/agents/` for different development workflows. Use the appropriate agent based on the task:
+
+### Planning & Architecture
+
+**code-architect** - Use when:
+- Planning new game features (e.g., "Design architecture for multiplayer mode")
+- Planning PixiJS integration strategy
+- Designing new card ability systems
+- Refactoring component structure
+- Establishing patterns for new modules
+
+### Implementation
+
+**frontend-developer** - Use when:
+- Building/modifying React components (GameBoard, PlayerArea, etc.)
+- Implementing PixiJS animations and visual effects
+- Working with Tailwind CSS styling
+- Optimizing React rendering performance
+- Implementing responsive layouts
+- Adding new UI features or screens
+
+**whimsy-injector** - Use PROACTIVELY after:
+- Any UI/UX implementation or change
+- Creating new game screens or flows
+- Adding loading states, errors, or empty states
+- Implementing new animations or transitions
+- The agent adds delightful micro-interactions and personality
+
+### Testing & Debugging
+
+**test-writer-fixer** - Use when:
+- Code changes are made (proactively run tests)
+- Adding new game logic that needs test coverage
+- Test failures occur after refactoring
+- Vitest tests need updating for new behavior
+- Critical game logic lacks tests
+
+**debugger** - Use when:
+- Encountering errors or unexpected behavior
+- Test failures need investigation
+- Game state bugs occur
+- Performance issues arise
+- PixiJS rendering problems happen
+
+### Quality Assurance
+
+**code-reviewer** - Use:
+- After implementing significant features
+- Before major commits
+- When code quality needs assessment
+- To catch security issues or code smells
+
+### Specialized Tasks
+
+**visual-storyteller** - Use for:
+- Creating game tutorial graphics/infographics
+- Designing onboarding visual flows
+- Building marketing materials
+- Explaining complex game mechanics visually
+
+**changelog-generator** - Use for:
+- Documenting sprint work
+- Creating release notes
+- Generating change summaries for commits
+
+### Not Applicable to This Project
+
+❌ **backend-architect** - This is a pure frontend SPA with no backend
+❌ **react-native-dev** - This is React web, not React Native
+
+### Common Workflow Patterns
+
+**New Feature Flow:**
+1. `code-architect` - Design the feature architecture
+2. `frontend-developer` - Implement the UI/logic
+3. `whimsy-injector` - Add delightful touches
+4. `test-writer-fixer` - Write/run tests
+5. `code-reviewer` - Final quality check
+
+**Bug Fix Flow:**
+1. `debugger` - Identify root cause
+2. `frontend-developer` - Implement fix
+3. `test-writer-fixer` - Verify fix with tests
+4. `code-reviewer` - Review the changes
+
+**PixiJS Integration Flow:**
+1. `code-architect` - Plan integration approach
+2. `frontend-developer` - Implement rendering layer
+3. `whimsy-injector` - Add animations/effects
+4. `test-writer-fixer` - Test rendering logic
