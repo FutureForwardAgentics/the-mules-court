@@ -29,6 +29,7 @@ export class BabylonCard {
   private container: Rectangle;
   private backgroundImage: Image;
   private portraitImage: Image;
+  private valueContainer: Rectangle;
   private nameText: TextBlock;
   private valueText: TextBlock;
   private abilityText: TextBlock;
@@ -63,7 +64,7 @@ export class BabylonCard {
     this.container.left = x;
     this.container.top = y;
 
-    advancedTexture.addControl(this.container);
+    // Note: Don't add to advancedTexture here - parent will do it via getContainer()
 
     // Background image (card back initially)
     this.backgroundImage = new Image(`card-bg-${config.id}`, config.cardBackUrl);
@@ -81,34 +82,48 @@ export class BabylonCard {
     this.portraitImage.isVisible = false;
     this.container.addControl(this.portraitImage);
 
-    // Card value (top-left corner)
-    this.valueText = new TextBlock(`card-value-${config.id}`, config.value.toString());
-    this.valueText.fontSize = 32;
-    this.valueText.color = 'white';
-    this.valueText.fontWeight = 'bold';
-    this.valueText.textHorizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
-    this.valueText.textVerticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
-    this.valueText.left = '10px';
-    this.valueText.top = '10px';
-    this.valueText.width = '40px';
-    this.valueText.height = '40px';
-    this.valueText.isVisible = false;
-    this.container.addControl(this.valueText);
+    // Card value (top-left corner with high contrast background)
+    this.valueContainer = new Rectangle(`card-value-bg-${config.id}`);
+    this.valueContainer.width = '50px';
+    this.valueContainer.height = '50px';
+    this.valueContainer.thickness = 2;
+    this.valueContainer.cornerRadius = 25;
+    this.valueContainer.background = 'rgba(0, 0, 0, 0.9)';
+    this.valueContainer.color = '#fbbf24'; // Gold border for visibility
+    this.valueContainer.horizontalAlignment = Control.HORIZONTAL_ALIGNMENT_LEFT;
+    this.valueContainer.verticalAlignment = Control.VERTICAL_ALIGNMENT_TOP;
+    this.valueContainer.left = '10px';
+    this.valueContainer.top = '10px';
+    this.valueContainer.isVisible = false;
+    this.container.addControl(this.valueContainer);
 
-    // Card name
+    this.valueText = new TextBlock(`card-value-${config.id}`, config.value.toString());
+    this.valueText.fontSize = 36;
+    this.valueText.color = '#fbbf24'; // Gold text for high contrast
+    this.valueText.fontWeight = 'bold';
+    this.valueText.outlineWidth = 2;
+    this.valueText.outlineColor = 'black';
+    this.valueContainer.addControl(this.valueText);
+
+    // Card name (high contrast)
     this.nameText = new TextBlock(`card-name-${config.id}`, config.name);
     this.nameText.fontSize = 18;
     this.nameText.color = 'white';
     this.nameText.fontWeight = 'bold';
+    this.nameText.outlineWidth = 3;
+    this.nameText.outlineColor = 'black';
     this.nameText.top = '100px';
     this.nameText.height = '30px';
     this.nameText.isVisible = false;
     this.container.addControl(this.nameText);
 
-    // Card ability
+    // Card ability (high contrast)
     this.abilityText = new TextBlock(`card-ability-${config.id}`, config.ability);
     this.abilityText.fontSize = 12;
     this.abilityText.color = 'white';
+    this.abilityText.fontWeight = 'bold';
+    this.abilityText.outlineWidth = 2;
+    this.abilityText.outlineColor = 'black';
     this.abilityText.textWrapping = true;
     this.abilityText.top = '130px';
     this.abilityText.width = '180px';
@@ -116,11 +131,13 @@ export class BabylonCard {
     this.abilityText.isVisible = false;
     this.container.addControl(this.abilityText);
 
-    // Card quote
+    // Card quote (high contrast)
     this.quoteText = new TextBlock(`card-quote-${config.id}`, `"${config.quote}"`);
     this.quoteText.fontSize = 10;
-    this.quoteText.color = 'rgba(255, 255, 255, 0.7)';
+    this.quoteText.color = '#d1d5db'; // Light gray
     this.quoteText.fontStyle = 'italic';
+    this.quoteText.outlineWidth = 1;
+    this.quoteText.outlineColor = 'black';
     this.quoteText.textWrapping = true;
     this.quoteText.top = '120px';
     this.quoteText.width = '180px';
@@ -180,7 +197,7 @@ export class BabylonCard {
       // Show front
       this.backgroundImage.source = this.config.cardFrontUrl;
       this.portraitImage.isVisible = true;
-      this.valueText.isVisible = true;
+      this.valueContainer.isVisible = true;
       this.nameText.isVisible = true;
       this.abilityText.isVisible = true;
       this.quoteText.isVisible = true;
@@ -188,7 +205,7 @@ export class BabylonCard {
       // Show back
       this.backgroundImage.source = this.config.cardBackUrl;
       this.portraitImage.isVisible = false;
-      this.valueText.isVisible = false;
+      this.valueContainer.isVisible = false;
       this.nameText.isVisible = false;
       this.abilityText.isVisible = false;
       this.quoteText.isVisible = false;
