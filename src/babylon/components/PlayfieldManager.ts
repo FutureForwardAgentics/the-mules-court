@@ -38,6 +38,7 @@ export class PlayfieldManager {
   private centerInfoPanel!: Rectangle; // Will be initialized in createCenterInfoPanel()
   private phaseText!: TextBlock; // Will be initialized in createCenterInfoPanel()
   private currentPlayerText!: TextBlock; // Will be initialized in createCenterInfoPanel()
+  private previousHandSizes: Map<string, number> = new Map(); // Track hand sizes for animation
 
 
   constructor(scene: Scene, advancedTexture: AdvancedDynamicTexture) {
@@ -235,6 +236,16 @@ export class PlayfieldManager {
     this.updatePlayerAreas(gameState);
   }
 
+  /**
+   * Get deck container position for animations
+   */
+  public getDeckPosition(): { x: number; y: number } {
+    return {
+      x: parseFloat(this.deckContainer.left as string) || 0,
+      y: parseFloat(this.deckContainer.top as string) || 0
+    };
+  }
+
   private updateDeckWithAnimation(gameState: GameState): void {
     const deckCount = gameState.deck.length;
 
@@ -339,6 +350,8 @@ export class PlayfieldManager {
 
       // Get or create player area
       let playerArea = this.playerAreas.get(player.id);
+      const previousHandSize = this.previousHandSizes.get(player.id);
+
       if (!playerArea) {
         playerArea = new PlayerAreaUI(
           this.scene,
@@ -349,8 +362,11 @@ export class PlayfieldManager {
         );
         this.playerAreas.set(player.id, playerArea);
       } else {
-        playerArea.update(player, gameState.currentPlayerIndex === index);
+        playerArea.update(player, gameState.currentPlayerIndex === index, previousHandSize);
       }
+
+      // Update tracked hand size
+      this.previousHandSizes.set(player.id, player.hand.length);
     });
   }
 
@@ -383,6 +399,8 @@ class PlayerAreaUI {
   private tokenContainer: StackPanel;
   private handContainer: Rectangle;
   private handCards: BabylonCard[] = [];
+  private discardContainer: Rectangle;
+  private discardCards: BabylonCard[] = [];
   private isLocalPlayer: boolean;
 
   constructor(
@@ -465,11 +483,28 @@ class PlayerAreaUI {
     handLabel.color = '#9ca3af';
     this.handContainer.addControl(handLabel);
 
+    // Discard pile (played cards)
+    this.discardContainer = new Rectangle(`player-${player.id}-discard`);
+    this.discardContainer.width = '100px';
+    this.discardContainer.height = '80px';
+    this.discardContainer.thickness = 1;
+    this.discardContainer.cornerRadius = 5;
+    this.discardContainer.color = '#6b7280';
+    this.discardContainer.background = 'rgba(0, 0, 0, 0.3)';
+    this.discardContainer.top = '-50px';
+    this.discardContainer.left = '100px';
+    this.container.addControl(this.discardContainer);
+
+    const discardLabel = new TextBlock(`player-${player.id}-discard-label`, 'Played');
+    discardLabel.fontSize = 10;
+    discardLabel.color = '#9ca3af';
+    this.discardContainer.addControl(discardLabel);
+
     // Initial update
     this.update(player, false);
   }
 
-  public update(player: Player, isCurrentPlayer: boolean): void {
+  public update(player: Player, isCurrentPlayer: boolean, previousHandSize?: number): void {
     // Update border based on current player with animation
     if (isCurrentPlayer) {
       this.container.color = '#ef4444'; // Red
@@ -520,11 +555,17 @@ class PlayerAreaUI {
       this.tokenContainer.addControl(tokenImage);
     }
 
+    // Check if a new card was drawn
+    const handSizeIncreased = previousHandSize !== undefined && player.hand.length > previousHandSize;
+
     // Update hand cards - RENDER ACTUAL CARDS
-    this.updateHandCards(player);
+    this.updateHandCards(player, handSizeIncreased);
+
+    // Update discard pile
+    this.updateDiscardPile(player);
   }
 
-  private updateHandCards(player: Player): void {
+  private updateHandCards(player: Player, animateNewCard: boolean = false): void {
     // Clear existing cards
     this.handCards.forEach(card => card.dispose());
     this.handCards = [];
@@ -533,17 +574,21 @@ class PlayerAreaUI {
     const handCount = player.hand.length;
 
     if (handCount > 0) {
-      // Style container to show cards present
-      this.handContainer.background = 'rgba(147, 51, 234, 0.3)';
-      this.handContainer.color = '#a78bfa';
-      this.handContainer.thickness = 2;
+      // Hide hand container background when cards are present
+      this.handContainer.background = 'rgba(0, 0, 0, 0)'; // Transparent
+      this.handContainer.color = 'transparent';
+      this.handContainer.thickness = 0;
 
-      // Render cards horizontally
-      const cardSpacing = 70; // Pixels between cards
-      const startX = handCount === 1 ? 0 : -(cardSpacing / 2);
+      // Calculate card positions (small cards in hand)
+      const cardWidth = 60;
+      const cardHeight = 90;
+      const cardSpacing = 10; // Pixels between cards
+      const totalWidth = (cardWidth * handCount) + (cardSpacing * (handCount - 1));
+      const startX = -(totalWidth / 2) + (cardWidth / 2); // Center the row
 
       player.hand.forEach((card, index) => {
-        const cardX = startX + (index * cardSpacing);
+        const cardX = startX + (index * (cardWidth + cardSpacing));
+        const isNewCard = animateNewCard && index === handCount - 1; // Last card is the new one
 
         const babylonCard = new BabylonCard(
           this.scene,
@@ -563,13 +608,23 @@ class PlayerAreaUI {
           '0px'
         );
 
+        // Scale down cards for hand (they're 200x300 by default)
+        const cardContainer = babylonCard.getContainer();
+        cardContainer.widthInPixels = cardWidth;
+        cardContainer.heightInPixels = cardHeight;
+
         // Make cards visible if local player
         if (this.isLocalPlayer) {
           babylonCard.flip(); // Show card face
         }
 
-        // Add to hand container (this is the key part that was missing!)
-        this.handContainer.addControl(babylonCard.getContainer());
+        // Add whimsical entrance animation for new cards
+        if (isNewCard) {
+          this.animateCardDraw(cardContainer);
+        }
+
+        // Add to hand container
+        this.handContainer.addControl(cardContainer);
         this.handCards.push(babylonCard);
       });
     } else {
@@ -582,6 +637,127 @@ class PlayerAreaUI {
       placeholder.fontSize = 12;
       placeholder.color = '#9ca3af';
       this.handContainer.addControl(placeholder);
+    }
+  }
+
+  /**
+   * Whimsical card draw animation
+   * - Starts small and grows
+   * - Bouncy entrance with rotation
+   * - Slight sparkle effect via opacity
+   */
+  private animateCardDraw(cardContainer: Rectangle): void {
+    const duration = 600; // milliseconds
+    const startTime = Date.now();
+
+    // Initial state: small, slightly rotated
+    cardContainer.scaleX = 0.1;
+    cardContainer.scaleY = 0.1;
+    cardContainer.rotation = Math.PI * 0.25; // 45 degrees
+    cardContainer.alpha = 0;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Bounce easing (overshoot then settle)
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      // Scale with bounce (overshoot to 1.15 then settle to 1.0)
+      const bounceScale = eased < 0.8
+        ? eased * 1.4
+        : 1.15 - (eased - 0.8) * 0.75;
+
+      cardContainer.scaleX = bounceScale;
+      cardContainer.scaleY = bounceScale;
+
+      // Rotation: spin in then settle
+      cardContainer.rotation = (1 - progress) * Math.PI * 0.25;
+
+      // Opacity: fade in with sparkle
+      cardContainer.alpha = Math.min(progress * 1.5, 1.0);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Final state
+        cardContainer.scaleX = 1.0;
+        cardContainer.scaleY = 1.0;
+        cardContainer.rotation = 0;
+        cardContainer.alpha = 1.0;
+      }
+    };
+
+    animate();
+  }
+
+  /**
+   * Update discard pile with stacked cards showing values
+   */
+  private updateDiscardPile(player: Player): void {
+    // Clear existing discard cards
+    this.discardCards.forEach(card => card.dispose());
+    this.discardCards = [];
+    this.discardContainer.clearControls();
+
+    const discardCount = player.discardPile.length;
+
+    if (discardCount > 0) {
+      // Hide placeholder background
+      this.discardContainer.background = 'rgba(0, 0, 0, 0)';
+      this.discardContainer.color = 'transparent';
+      this.discardContainer.thickness = 0;
+
+      // Stack cards with slight offset to show values
+      const cardWidth = 50;
+      const cardHeight = 75;
+      const stackOffset = 15; // Pixels offset for each card (shows top portion)
+
+      player.discardPile.forEach((card, index) => {
+        const cardY = -(discardCount - 1 - index) * stackOffset; // Stack from bottom to top
+
+        const babylonCard = new BabylonCard(
+          this.scene,
+          this.advancedTexture,
+          {
+            id: `discard-${card.id}`,
+            name: card.name,
+            value: card.value,
+            ability: card.ability,
+            quote: card.quote,
+            portraitUrl: `/img/${card.value}_${card.type}.png`,
+            cardBackUrl: '/img/card_back_3.png',
+            cardFrontUrl: '/img/card_front_3.png',
+            color: this.parseCardColor(card.color)
+          },
+          '0px',
+          `${cardY}px`
+        );
+
+        // Scale down for discard pile
+        const cardContainer = babylonCard.getContainer();
+        cardContainer.widthInPixels = cardWidth;
+        cardContainer.heightInPixels = cardHeight;
+
+        // Always show face for discard pile
+        babylonCard.flip();
+
+        // Add to discard container
+        this.discardContainer.addControl(cardContainer);
+        this.discardCards.push(babylonCard);
+      });
+    } else {
+      // No cards - show placeholder
+      this.discardContainer.background = 'rgba(0, 0, 0, 0.3)';
+      this.discardContainer.color = '#6b7280';
+      this.discardContainer.thickness = 1;
+
+      const placeholder = new TextBlock('discard-empty', 'Played');
+      placeholder.fontSize = 10;
+      placeholder.color = '#9ca3af';
+      this.discardContainer.addControl(placeholder);
     }
   }
 
@@ -670,6 +846,9 @@ class PlayerAreaUI {
     // Dispose hand cards
     this.handCards.forEach(card => card.dispose());
     this.handCards = [];
+    // Dispose discard cards
+    this.discardCards.forEach(card => card.dispose());
+    this.discardCards = [];
     // Dispose container (which will dispose all children)
     this.container.dispose();
   }
