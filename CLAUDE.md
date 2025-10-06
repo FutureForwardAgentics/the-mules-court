@@ -230,3 +230,4 @@ This project has specialized agents in `.claude/agents/` for different developme
 2. `frontend-developer` - Implement rendering layer
 3. `whimsy-injector` - Add animations/effects
 4. `test-writer-fixer` - Test rendering logic
+- This project uses `babylon.js` for the GUI. The documents can be found at https://doc.babylonjs.com and the API calls can be found at https://doc.babylonjs.com/typedoc/modules/BABYLON.
