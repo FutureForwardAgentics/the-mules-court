@@ -17,6 +17,7 @@ export interface CardConfig {
   cardBackUrl: string;
   cardFrontUrl: string;
   color: { r: number; g: number; b: number }; // Rose color for Bayta
+  onClick?: () => void; // Optional click handler
 }
 
 /**
@@ -161,10 +162,14 @@ export class BabylonCard {
       this.removeHoverEffect();
     });
 
-    // Click handler
+    // Click handler - use provided callback or default to flip
     this.container.onPointerClickObservable.add(() => {
       console.log(`Card clicked: ${this.config.name}`, this.config);
-      this.flip();
+      if (this.config.onClick) {
+        this.config.onClick();
+      } else {
+        this.flip();
+      }
     });
   }
 

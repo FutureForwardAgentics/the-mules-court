@@ -39,6 +39,7 @@ export class PlayfieldManager {
   private phaseText!: TextBlock; // Will be initialized in createCenterInfoPanel()
   private currentPlayerText!: TextBlock; // Will be initialized in createCenterInfoPanel()
   private previousHandSizes: Map<string, number> = new Map(); // Track hand sizes for animation
+  private onCardClick?: (cardId: string) => void; // Card click handler
 
 
   constructor(scene: Scene, advancedTexture: AdvancedDynamicTexture) {
@@ -150,69 +151,70 @@ export class PlayfieldManager {
 
   /**
    * Calculate player area positions based on player count
+   * 2.5D perspective: players further away appear smaller/higher
    */
   private calculatePlayerLayouts(playerCount: number): PlayerAreaLayout[] {
     const layouts: PlayerAreaLayout[] = [];
 
     if (playerCount === 2) {
-      // Horizontal split: bottom vs top
+      // Horizontal split: bottom (close) vs top (far) with perspective
       layouts.push({
-        x: 0, y: 200,       // Player 1 bottom center
-        handX: 0, handY: 250,
-        nameX: 0, nameY: 150,
-        tokensX: 200, tokensY: 150
+        x: 0, y: 260,       // Player 1 bottom center (closer - larger)
+        handX: 0, handY: 310,
+        nameX: 0, nameY: 210,
+        tokensX: 250, tokensY: 210
       });
       layouts.push({
-        x: 0, y: -200,      // Player 2 top center
-        handX: 0, handY: -250,
-        nameX: 0, nameY: -150,
-        tokensX: 200, tokensY: -150
+        x: 0, y: -260,      // Player 2 top center (farther - smaller)
+        handX: 0, handY: -310,
+        nameX: 0, nameY: -210,
+        tokensX: 250, tokensY: -210
       });
     } else if (playerCount === 3) {
-      // Triangular: bottom center, top left, top right
+      // Triangular: bottom center (close), top left/right (far)
       layouts.push({
-        x: 0, y: 220,       // Player 1 bottom
-        handX: 0, handY: 270,
-        nameX: 0, nameY: 170,
-        tokensX: 200, tokensY: 170
+        x: 0, y: 280,       // Player 1 bottom (closest)
+        handX: 0, handY: 330,
+        nameX: 0, nameY: 230,
+        tokensX: 250, tokensY: 230
       });
       layouts.push({
-        x: -300, y: -150,   // Player 2 top left
-        handX: -300, handY: -200,
-        nameX: -300, nameY: -100,
-        tokensX: -100, tokensY: -100
+        x: -380, y: -200,   // Player 2 top left (far)
+        handX: -380, handY: -250,
+        nameX: -380, nameY: -150,
+        tokensX: -180, tokensY: -150
       });
       layouts.push({
-        x: 300, y: -150,    // Player 3 top right
-        handX: 300, handY: -200,
-        nameX: 300, nameY: -100,
-        tokensX: 500, tokensY: -100
+        x: 380, y: -200,    // Player 3 top right (far)
+        handX: 380, handY: -250,
+        nameX: 380, nameY: -150,
+        tokensX: 580, tokensY: -150
       });
     } else { // 4 players
-      // Quadrant: bottom, left, top, right
+      // Quadrant: bottom (close), left/right (mid), top (far)
       layouts.push({
-        x: 0, y: 240,       // Player 1 bottom
-        handX: 0, handY: 290,
-        nameX: 0, nameY: 190,
-        tokensX: 200, tokensY: 190
+        x: 0, y: 300,       // Player 1 bottom (closest)
+        handX: 0, handY: 350,
+        nameX: 0, nameY: 250,
+        tokensX: 250, tokensY: 250
       });
       layouts.push({
-        x: -350, y: 0,      // Player 2 left
-        handX: -400, handY: 0,
-        nameX: -300, nameY: -50,
-        tokensX: -150, tokensY: -50
+        x: -430, y: 20,     // Player 2 left (mid-distance)
+        handX: -480, handY: 20,
+        nameX: -380, nameY: -30,
+        tokensX: -230, tokensY: -30
       });
       layouts.push({
-        x: 0, y: -240,      // Player 3 top
-        handX: 0, handY: -290,
-        nameX: 0, nameY: -190,
-        tokensX: 200, tokensY: -190
+        x: 0, y: -300,      // Player 3 top (farthest)
+        handX: 0, handY: -350,
+        nameX: 0, nameY: -250,
+        tokensX: 250, tokensY: -250
       });
       layouts.push({
-        x: 350, y: 0,       // Player 4 right
-        handX: 400, handY: 0,
-        nameX: 300, nameY: -50,
-        tokensX: 550, tokensY: -50
+        x: 430, y: 20,      // Player 4 right (mid-distance)
+        handX: 480, handY: 20,
+        nameX: 380, nameY: -30,
+        tokensX: 630, tokensY: -30
       });
     }
 
@@ -244,6 +246,13 @@ export class PlayfieldManager {
       x: parseFloat(this.deckContainer.left as string) || 0,
       y: parseFloat(this.deckContainer.top as string) || 0
     };
+  }
+
+  /**
+   * Set card click handler for game interaction
+   */
+  public setCardClickHandler(handler: (cardId: string) => void): void {
+    this.onCardClick = handler;
   }
 
   private updateDeckWithAnimation(gameState: GameState): void {
@@ -358,15 +367,18 @@ export class PlayfieldManager {
           this.advancedTexture,
           player,
           layout,
-          index === 0 // Assume player 0 is local player
+          index === 0, // Assume player 0 is local player
+          this.onCardClick,
+          index // Pass player index for perspective scaling
         );
         this.playerAreas.set(player.id, playerArea);
+        // Initialize previous hand size to prevent false animation on first update
+        this.previousHandSizes.set(player.id, player.hand.length);
       } else {
-        playerArea.update(player, gameState.currentPlayerIndex === index, previousHandSize);
+        playerArea.update(player, gameState.currentPlayerIndex === index, previousHandSize, this.onCardClick);
+        // Update tracked hand size AFTER update
+        this.previousHandSizes.set(player.id, player.hand.length);
       }
-
-      // Update tracked hand size
-      this.previousHandSizes.set(player.id, player.hand.length);
     });
   }
 
@@ -408,22 +420,35 @@ class PlayerAreaUI {
     advancedTexture: AdvancedDynamicTexture,
     player: Player,
     layout: PlayerAreaLayout,
-    isLocalPlayer: boolean
+    isLocalPlayer: boolean,
+    onCardClick?: (cardId: string) => void,
+    playerIndex: number = 0
   ) {
     this.scene = scene;
     this.advancedTexture = advancedTexture;
     this.isLocalPlayer = isLocalPlayer;
 
-    // Create main container
+    // Calculate perspective scale (player 0 is closest = 1.0, others scale down)
+    const perspectiveScale = playerIndex === 0 ? 1.0 : 0.85;
+
+    // Create main container (larger for better visibility and depth)
     this.container = new Rectangle(`player-${player.id}-container`);
-    this.container.width = '300px';
-    this.container.height = '180px';
-    this.container.thickness = 2;
-    this.container.cornerRadius = 10;
+    this.container.width = '400px'; // Increased from 300px
+    this.container.height = '240px'; // Increased from 180px
+    this.container.thickness = 3; // Thicker border
+    this.container.cornerRadius = 15; // Rounder corners
     this.container.color = '#6b7280';
-    this.container.background = 'rgba(0, 0, 0, 0.6)';
+    this.container.background = 'rgba(0, 0, 0, 0.7)'; // Slightly more opaque
     this.container.left = `${layout.x}px`;
     this.container.top = `${layout.y}px`;
+    // Apply perspective scaling
+    this.container.scaleX = perspectiveScale;
+    this.container.scaleY = perspectiveScale;
+    // Add shadow effect for depth
+    this.container.shadowBlur = 20;
+    this.container.shadowOffsetX = 0;
+    this.container.shadowOffsetY = 10;
+    this.container.shadowColor = 'rgba(0, 0, 0, 0.5)';
     advancedTexture.addControl(this.container);
 
     // Player name
@@ -467,15 +492,15 @@ class PlayerAreaUI {
     this.tokenContainer.top = '40px';
     this.container.addControl(this.tokenContainer);
 
-    // Hand placeholder
+    // Hand placeholder (larger for bigger cards)
     this.handContainer = new Rectangle(`player-${player.id}-hand`);
-    this.handContainer.width = '150px';
-    this.handContainer.height = '60px';
-    this.handContainer.thickness = 1;
-    this.handContainer.cornerRadius = 5;
+    this.handContainer.width = '250px'; // Increased from 150px
+    this.handContainer.height = '160px'; // Increased from 60px
+    this.handContainer.thickness = 2;
+    this.handContainer.cornerRadius = 10;
     this.handContainer.color = '#4b5563';
     this.handContainer.background = 'rgba(0, 0, 0, 0.3)';
-    this.handContainer.top = '50px';
+    this.handContainer.top = '60px';
     this.container.addControl(this.handContainer);
 
     const handLabel = new TextBlock(`player-${player.id}-hand-label`, 'Hand');
@@ -483,16 +508,16 @@ class PlayerAreaUI {
     handLabel.color = '#9ca3af';
     this.handContainer.addControl(handLabel);
 
-    // Discard pile (played cards)
+    // Discard pile (played cards) - larger for better visibility
     this.discardContainer = new Rectangle(`player-${player.id}-discard`);
-    this.discardContainer.width = '100px';
-    this.discardContainer.height = '80px';
-    this.discardContainer.thickness = 1;
-    this.discardContainer.cornerRadius = 5;
+    this.discardContainer.width = '120px'; // Increased from 100px
+    this.discardContainer.height = '130px'; // Increased from 80px
+    this.discardContainer.thickness = 2;
+    this.discardContainer.cornerRadius = 10;
     this.discardContainer.color = '#6b7280';
     this.discardContainer.background = 'rgba(0, 0, 0, 0.3)';
-    this.discardContainer.top = '-50px';
-    this.discardContainer.left = '100px';
+    this.discardContainer.top = '-70px';
+    this.discardContainer.left = '130px';
     this.container.addControl(this.discardContainer);
 
     const discardLabel = new TextBlock(`player-${player.id}-discard-label`, 'Played');
@@ -501,10 +526,10 @@ class PlayerAreaUI {
     this.discardContainer.addControl(discardLabel);
 
     // Initial update
-    this.update(player, false);
+    this.update(player, false, undefined, onCardClick);
   }
 
-  public update(player: Player, isCurrentPlayer: boolean, previousHandSize?: number): void {
+  public update(player: Player, isCurrentPlayer: boolean, previousHandSize?: number, onCardClick?: (cardId: string) => void): void {
     // Update border based on current player with animation
     if (isCurrentPlayer) {
       this.container.color = '#ef4444'; // Red
@@ -559,13 +584,13 @@ class PlayerAreaUI {
     const handSizeIncreased = previousHandSize !== undefined && player.hand.length > previousHandSize;
 
     // Update hand cards - RENDER ACTUAL CARDS
-    this.updateHandCards(player, handSizeIncreased);
+    this.updateHandCards(player, handSizeIncreased, onCardClick);
 
     // Update discard pile
     this.updateDiscardPile(player);
   }
 
-  private updateHandCards(player: Player, animateNewCard: boolean = false): void {
+  private updateHandCards(player: Player, animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
     // Clear existing cards
     this.handCards.forEach(card => card.dispose());
     this.handCards = [];
@@ -579,10 +604,10 @@ class PlayerAreaUI {
       this.handContainer.color = 'transparent';
       this.handContainer.thickness = 0;
 
-      // Calculate card positions (small cards in hand)
-      const cardWidth = 60;
-      const cardHeight = 90;
-      const cardSpacing = 10; // Pixels between cards
+      // Calculate card positions (larger cards in hand for better visibility)
+      const cardWidth = 100; // Increased from 60
+      const cardHeight = 150; // Increased from 90
+      const cardSpacing = 15; // Increased spacing
       const totalWidth = (cardWidth * handCount) + (cardSpacing * (handCount - 1));
       const startX = -(totalWidth / 2) + (cardWidth / 2); // Center the row
 
@@ -602,7 +627,8 @@ class PlayerAreaUI {
             portraitUrl: `/img/${card.value}_${card.type}.png`,
             cardBackUrl: '/img/card_back_3.png',
             cardFrontUrl: '/img/card_front_3.png',
-            color: this.parseCardColor(card.color)
+            color: this.parseCardColor(card.color),
+            onClick: this.isLocalPlayer && onCardClick ? () => onCardClick(card.id) : undefined
           },
           `${cardX}px`,
           '0px'
@@ -710,10 +736,10 @@ class PlayerAreaUI {
       this.discardContainer.color = 'transparent';
       this.discardContainer.thickness = 0;
 
-      // Stack cards with slight offset to show values
-      const cardWidth = 50;
-      const cardHeight = 75;
-      const stackOffset = 15; // Pixels offset for each card (shows top portion)
+      // Stack cards with slight offset to show values (larger for visibility)
+      const cardWidth = 70; // Increased from 50
+      const cardHeight = 105; // Increased from 75
+      const stackOffset = 20; // Increased offset for better visibility
 
       player.discardPile.forEach((card, index) => {
         const cardY = -(discardCount - 1 - index) * stackOffset; // Stack from bottom to top

@@ -110,6 +110,13 @@ interface GameControlsProps {
 function GameControls({ playerCount, playfieldManager }: GameControlsProps) {
   const gameState = useGameState(playerCount);
 
+  // Set card click handler
+  useEffect(() => {
+    if (playfieldManager) {
+      playfieldManager.setCardClickHandler(gameState.playCard);
+    }
+  }, [playfieldManager, gameState.playCard]);
+
   // Update playfield when game state changes
   useEffect(() => {
     if (playfieldManager && gameState.gameState) {
