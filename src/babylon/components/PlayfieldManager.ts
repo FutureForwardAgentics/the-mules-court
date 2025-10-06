@@ -1,4 +1,4 @@
-import { Scene, FreeCamera, Vector3 } from '@babylonjs/core';
+import { Scene, FreeCamera, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator, Color3 } from '@babylonjs/core';
 import {
   AdvancedDynamicTexture,
   Rectangle,
@@ -7,6 +7,7 @@ import {
   StackPanel
 } from '@babylonjs/gui';
 import { BabylonCard } from './BabylonCard';
+import { BabylonCardMesh } from './BabylonCardMesh';
 import type { GameState, Player } from '../../types/game';
 
 interface PlayerAreaLayout {
@@ -40,16 +41,21 @@ export class PlayfieldManager {
   private currentPlayerText!: TextBlock; // Will be initialized in createCenterInfoPanel()
   private previousHandSizes: Map<string, number> = new Map(); // Track hand sizes for animation
   private onCardClick?: (cardId: string) => void; // Card click handler
+  private shadowGenerator: ShadowGenerator; // For card shadows
+  private use3DCards: boolean = true; // Toggle for 3D vs GUI cards
 
 
   constructor(scene: Scene, advancedTexture: AdvancedDynamicTexture) {
     this.scene = scene;
     this.advancedTexture = advancedTexture;
 
-    // Create camera (required for BabylonJS scene rendering)
-    const camera = new FreeCamera('playfield-camera', new Vector3(0, 0, -10), scene);
-    camera.setTarget(Vector3.Zero());
+    // Create camera with better positioning for 2.5D
+    const camera = new FreeCamera('playfield-camera', new Vector3(0, -5, -20), scene);
+    camera.setTarget(new Vector3(0, 0, 0));
     scene.activeCamera = camera;
+
+    // Add lighting for 3D depth
+    this.shadowGenerator = this.setupLighting(scene);
 
     // Create background
     this.backgroundImage = new Image('playfield-bg', '/img/playfield_background_space.png');
@@ -147,6 +153,29 @@ export class PlayfieldManager {
     panel.addControl(playerText);
 
     return { panel, phaseText, playerText };
+  }
+
+  /**
+   * Setup lighting for 3D card depth and shadows
+   */
+  private setupLighting(scene: Scene): ShadowGenerator {
+    // Hemispheric light for ambient lighting
+    const ambientLight = new HemisphericLight('ambient-light', new Vector3(0, 1, 0), scene);
+    ambientLight.intensity = 0.6;
+    ambientLight.diffuse = new Color3(0.8, 0.8, 1.0); // Slight blue tint
+    ambientLight.groundColor = new Color3(0.3, 0.3, 0.4);
+
+    // Directional light for shadows and depth
+    const mainLight = new DirectionalLight('main-light', new Vector3(-0.5, -1, -0.3), scene);
+    mainLight.intensity = 0.8;
+    mainLight.position = new Vector3(10, 20, 10);
+
+    // Create shadow generator
+    const shadowGenerator = new ShadowGenerator(1024, mainLight);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+
+    return shadowGenerator;
   }
 
   /**
@@ -369,7 +398,9 @@ export class PlayfieldManager {
           layout,
           index === 0, // Assume player 0 is local player
           this.onCardClick,
-          index // Pass player index for perspective scaling
+          index, // Pass player index for perspective scaling
+          this.shadowGenerator,
+          this.use3DCards
         );
         this.playerAreas.set(player.id, playerArea);
         // Initialize previous hand size to prevent false animation on first update
@@ -411,9 +442,13 @@ class PlayerAreaUI {
   private tokenContainer: StackPanel;
   private handContainer: Rectangle;
   private handCards: BabylonCard[] = [];
+  private handMeshCards: BabylonCardMesh[] = []; // 3D mesh cards
   private discardContainer: Rectangle;
   private discardCards: BabylonCard[] = [];
+  private discardMeshCards: BabylonCardMesh[] = []; // 3D mesh discard cards
   private isLocalPlayer: boolean;
+  private shadowGenerator?: ShadowGenerator;
+  private use3DCards: boolean;
 
   constructor(
     scene: Scene,
@@ -422,11 +457,15 @@ class PlayerAreaUI {
     layout: PlayerAreaLayout,
     isLocalPlayer: boolean,
     onCardClick?: (cardId: string) => void,
-    playerIndex: number = 0
+    playerIndex: number = 0,
+    shadowGenerator?: ShadowGenerator,
+    use3DCards: boolean = true
   ) {
     this.scene = scene;
     this.advancedTexture = advancedTexture;
     this.isLocalPlayer = isLocalPlayer;
+    this.shadowGenerator = shadowGenerator;
+    this.use3DCards = use3DCards;
 
     // Calculate perspective scale (player 0 is closest = 1.0, others scale down)
     const perspectiveScale = playerIndex === 0 ? 1.0 : 0.85;
@@ -590,7 +629,76 @@ class PlayerAreaUI {
     this.updateDiscardPile(player);
   }
 
+  /**
+   * Helper to convert 2D pixel position to 3D world position
+   */
+  private pixelTo3D(pixelX: number, pixelY: number, z: number = 0): Vector3 {
+    // Simple conversion: pixels to world units
+    // Assuming screen center is (0,0) and scaling down
+    const worldX = pixelX / 100; // Scale factor
+    const worldY = -pixelY / 100; // Invert Y for 3D space
+    return new Vector3(worldX, worldY, z);
+  }
+
   private updateHandCards(player: Player, animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
+    if (this.use3DCards) {
+      // Use 3D mesh cards
+      this.update3DHandCards(player, animateNewCard, onCardClick);
+    } else {
+      // Use GUI cards (original implementation)
+      this.updateGUIHandCards(player, animateNewCard, onCardClick);
+    }
+  }
+
+  private update3DHandCards(player: Player, _animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
+    // Clear existing 3D cards
+    this.handMeshCards.forEach(card => card.dispose());
+    this.handMeshCards = [];
+
+    const handCount = player.hand.length;
+
+    if (handCount > 0) {
+      // Hide hand container background for 3D cards
+      this.handContainer.background = 'rgba(0, 0, 0, 0)';
+      this.handContainer.color = 'transparent';
+      this.handContainer.thickness = 0;
+
+      // Calculate 3D positions
+      const cardSpacing = 2.5; // World units
+      const startX = -(handCount - 1) * cardSpacing / 2;
+
+      // Get container world position (approximate from layout)
+      const containerWorldPos = this.pixelTo3D(
+        parseFloat(this.container.left as string) || 0,
+        parseFloat(this.container.top as string) + 60 || 0, // Offset for hand area
+        0
+      );
+
+      player.hand.forEach((card, index) => {
+        const xOffset = startX + (index * cardSpacing);
+        const position = new Vector3(
+          containerWorldPos.x + xOffset,
+          containerWorldPos.y,
+          containerWorldPos.z
+        );
+
+        const meshCard = new BabylonCardMesh(this.scene, {
+          card,
+          size: 'medium',
+          isRevealed: this.isLocalPlayer,
+          isInteractive: this.isLocalPlayer,
+          position,
+          onCardClick: onCardClick ? () => onCardClick(card.id) : undefined,
+          rotation: new Vector3(0.1, 0, 0), // Slight tilt
+          shadowGenerator: this.shadowGenerator
+        });
+
+        this.handMeshCards.push(meshCard);
+      });
+    }
+  }
+
+  private updateGUIHandCards(player: Player, animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
     // Clear existing cards
     this.handCards.forEach(card => card.dispose());
     this.handCards = [];
@@ -869,12 +977,18 @@ class PlayerAreaUI {
   }
 
   public dispose(): void {
-    // Dispose hand cards
+    // Dispose GUI hand cards
     this.handCards.forEach(card => card.dispose());
     this.handCards = [];
-    // Dispose discard cards
+    // Dispose 3D mesh hand cards
+    this.handMeshCards.forEach(card => card.dispose());
+    this.handMeshCards = [];
+    // Dispose GUI discard cards
     this.discardCards.forEach(card => card.dispose());
     this.discardCards = [];
+    // Dispose 3D mesh discard cards
+    this.discardMeshCards.forEach(card => card.dispose());
+    this.discardMeshCards = [];
     // Dispose container (which will dispose all children)
     this.container.dispose();
   }

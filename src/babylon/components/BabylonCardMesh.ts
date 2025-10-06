@@ -6,7 +6,9 @@ import {
   Vector3,
   Color3,
   ActionManager,
-  ExecuteCodeAction
+  ExecuteCodeAction,
+  Texture,
+  ShadowGenerator
 } from '@babylonjs/core';
 import type { Card } from '../../types/game';
 import type { CardSize } from '../../types/babylon';
@@ -21,6 +23,8 @@ export interface CardMeshConfig {
   isInteractive: boolean;
   position: Vector3;
   onCardClick?: (cardId: string) => void;
+  rotation?: Vector3; // Optional initial rotation for 2.5D effect
+  shadowGenerator?: ShadowGenerator; // Optional shadow casting
 }
 
 /**
@@ -56,6 +60,20 @@ export class BabylonCardMesh {
 
     // Set initial position
     this.mesh.position = config.position;
+
+    // Apply rotation for 2.5D effect if provided
+    if (config.rotation) {
+      this.mesh.rotation = config.rotation;
+    } else {
+      // Default slight tilt for depth
+      this.mesh.rotation = new Vector3(0.1, 0, 0); // Tilt forward slightly
+    }
+
+    // Enable shadow casting if shadow generator provided
+    if (config.shadowGenerator) {
+      config.shadowGenerator.addShadowCaster(this.mesh);
+      this.mesh.receiveShadows = true;
+    }
 
     // Enable interactions if needed
     if (config.isInteractive && config.onCardClick) {
@@ -93,8 +111,7 @@ export class BabylonCardMesh {
   }
 
   /**
-   * Create a temporary material for the card
-   * This will be replaced with the shader material in Stage 3
+   * Create a graphical material for the card with textures
    */
   private createCardMaterial(): StandardMaterial {
     const material = new StandardMaterial(
@@ -102,55 +119,31 @@ export class BabylonCardMesh {
       this.scene
     );
 
-    if (this.config.isRevealed) {
-      // For now, use a solid color based on card color
-      // Later this will be replaced with actual card texture + shader
-      const cardColor = this.parseCardColor(this.config.card.color);
-      material.diffuseColor = cardColor;
-      material.emissiveColor = cardColor.scale(0.2); // Slight glow
-    } else {
-      // Card back - dark gray
-      material.diffuseColor = new Color3(0.2, 0.2, 0.25);
-    }
+    // Load appropriate texture based on revealed state
+    const texturePath = this.config.isRevealed
+      ? `/img/${this.config.card.value}_${this.config.card.type}.png` // Card front with portrait
+      : '/img/card_back_3.png'; // Card back
 
-    // Add some basic properties
-    material.specularColor = new Color3(0.1, 0.1, 0.1); // Low specular
+    // Create and apply texture
+    const texture = new Texture(texturePath, this.scene);
+    material.diffuseTexture = texture;
+
+    // Graphical enhancements
+    material.specularColor = new Color3(0.3, 0.3, 0.3); // Slight shine
+    material.specularPower = 32; // Sharp highlights
     material.backFaceCulling = false; // Render both sides
+
+    // Add subtle emissive for card glow
+    material.emissiveColor = new Color3(0.05, 0.05, 0.08);
+
+    // Enable alpha if texture has transparency
+    if (texture) {
+      material.useAlphaFromDiffuseTexture = true;
+    }
 
     return material;
   }
 
-  /**
-   * Parse Tailwind gradient color to a single Color3
-   * For now, just extract the start color
-   * TODO: Proper gradient rendering in shader
-   */
-  private parseCardColor(tailwindGradient: string): Color3 {
-    // Simple mapping of Tailwind colors to RGB
-    // This is temporary - real cards will use textures
-    const colorMap: Record<string, Color3> = {
-      'from-slate-700': new Color3(0.2, 0.22, 0.25),
-      'from-blue-800': new Color3(0.12, 0.24, 0.47),
-      'from-indigo-800': new Color3(0.2, 0.18, 0.5),
-      'from-amber-800': new Color3(0.59, 0.35, 0.04),
-      'from-purple-800': new Color3(0.35, 0.16, 0.56),
-      'from-cyan-800': new Color3(0.08, 0.45, 0.55),
-      'from-rose-800': new Color3(0.62, 0.16, 0.36),
-      'from-red-800': new Color3(0.6, 0.15, 0.15),
-      'from-yellow-700': new Color3(0.64, 0.52, 0.08),
-      'from-emerald-800': new Color3(0.02, 0.47, 0.37),
-      'from-red-950': new Color3(0.35, 0.04, 0.04)
-    };
-
-    // Extract the "from-*" part of the gradient
-    const match = tailwindGradient.match(/from-[\w-]+/);
-    if (match && colorMap[match[0]]) {
-      return colorMap[match[0]];
-    }
-
-    // Default color
-    return new Color3(0.3, 0.3, 0.3);
-  }
 
   /**
    * Enable hover and click interactions using ActionManager
@@ -186,27 +179,42 @@ export class BabylonCardMesh {
   }
 
   /**
-   * Handle hover enter
+   * Handle hover enter with 2.5D effects
    */
   private onHoverEnter(): void {
-    // Scale up slightly
-    this.mesh.scaling = new Vector3(1.05, 1.05, 1.0);
-    // Brighten material
-    if (this.material.emissiveColor) {
-      this.material.emissiveColor = this.material.emissiveColor.scale(1.5);
-    }
+    // Scale up and lift
+    this.mesh.scaling = new Vector3(1.1, 1.1, 1.0);
+    this.mesh.position.z += 0.5; // Lift forward
+
+    // Add rotation tilt for depth
+    const currentRotation = this.mesh.rotation.clone();
+    this.mesh.rotation = new Vector3(
+      currentRotation.x - 0.1, // Tilt more forward
+      currentRotation.y,
+      currentRotation.z
+    );
+
+    // Brighten material with glow
+    this.material.emissiveColor = new Color3(0.1, 0.1, 0.15);
   }
 
   /**
    * Handle hover exit
    */
   private onHoverExit(): void {
-    // Reset scale
+    // Reset scale and position
     this.mesh.scaling = new Vector3(1.0, 1.0, 1.0);
-    // Reset brightness
-    if (this.material.diffuseColor) {
-      this.material.emissiveColor = this.material.diffuseColor.scale(0.2);
+    this.mesh.position.z -= 0.5; // Lower back
+
+    // Reset rotation
+    if (this.config.rotation) {
+      this.mesh.rotation = this.config.rotation.clone();
+    } else {
+      this.mesh.rotation = new Vector3(0.1, 0, 0);
     }
+
+    // Reset brightness
+    this.material.emissiveColor = new Color3(0.05, 0.05, 0.08);
   }
 
   /**
@@ -219,20 +227,23 @@ export class BabylonCardMesh {
   }
 
   /**
-   * Update the card's revealed state
+   * Update the card's revealed state with texture swap
    */
   public setRevealed(isRevealed: boolean): void {
     this.config.isRevealed = isRevealed;
 
-    // Update material to show front or back
-    if (isRevealed) {
-      const cardColor = this.parseCardColor(this.config.card.color);
-      this.material.diffuseColor = cardColor;
-      this.material.emissiveColor = cardColor.scale(0.2);
-    } else {
-      this.material.diffuseColor = new Color3(0.2, 0.2, 0.25);
-      this.material.emissiveColor = new Color3(0, 0, 0);
+    // Update texture to show front or back
+    const texturePath = isRevealed
+      ? `/img/${this.config.card.value}_${this.config.card.type}.png`
+      : '/img/card_back_3.png';
+
+    // Dispose old texture
+    if (this.material.diffuseTexture) {
+      this.material.diffuseTexture.dispose();
     }
+
+    // Load new texture
+    this.material.diffuseTexture = new Texture(texturePath, this.scene);
   }
 
   /**
