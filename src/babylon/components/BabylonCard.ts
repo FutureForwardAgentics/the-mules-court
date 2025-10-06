@@ -280,4 +280,11 @@ export class BabylonCard {
   public setVisible(visible: boolean): void {
     this.container.isVisible = visible;
   }
+
+  /**
+   * Get the container element (for adding to other GUI controls)
+   */
+  public getContainer(): Rectangle {
+    return this.container;
+  }
 }

@@ -32,13 +32,14 @@ export class PlayfieldManager {
   private advancedTexture: AdvancedDynamicTexture;
   private backgroundImage: Image;
   private deckContainer: Rectangle;
-  private deckImage: Image;
-  private deckCountText: TextBlock;
+  private deckImage!: Image; // Will be initialized in createDeckArea()
+  private deckCountText!: TextBlock; // Will be initialized in createDeckArea()
   private playerAreas: Map<string, PlayerAreaUI> = new Map();
   private playerCards: Map<string, BabylonCard[]> = new Map();
-  private centerInfoPanel: Rectangle;
-  private phaseText: TextBlock;
-  private currentPlayerText: TextBlock;
+  private centerInfoPanel!: Rectangle; // Will be initialized in createCenterInfoPanel()
+  private phaseText!: TextBlock; // Will be initialized in createCenterInfoPanel()
+  private currentPlayerText!: TextBlock; // Will be initialized in createCenterInfoPanel()
+
 
   constructor(scene: Scene, advancedTexture: AdvancedDynamicTexture) {
     this.scene = scene;
@@ -382,6 +383,7 @@ class PlayerAreaUI {
   private statusText: TextBlock;
   private tokenContainer: StackPanel;
   private handContainer: Rectangle;
+  private handCards: BabylonCard[] = [];
   private isLocalPlayer: boolean;
 
   constructor(
@@ -519,17 +521,93 @@ class PlayerAreaUI {
       this.tokenContainer.addControl(tokenImage);
     }
 
-    // Update hand info with glow effect
+    // Update hand cards - RENDER ACTUAL CARDS
+    this.updateHandCards(player);
+  }
+
+  private updateHandCards(player: Player): void {
+    // Clear existing cards
+    this.handCards.forEach(card => card.dispose());
+    this.handCards = [];
+    this.handContainer.clearControls();
+
     const handCount = player.hand.length;
+
     if (handCount > 0) {
+      // Style container to show cards present
       this.handContainer.background = 'rgba(147, 51, 234, 0.3)';
       this.handContainer.color = '#a78bfa';
       this.handContainer.thickness = 2;
+
+      // Render cards horizontally
+      const cardSpacing = 70; // Pixels between cards
+      const startX = handCount === 1 ? 0 : -(cardSpacing / 2);
+
+      player.hand.forEach((card, index) => {
+        const cardX = startX + (index * cardSpacing);
+
+        const babylonCard = new BabylonCard(
+          this.scene,
+          this.advancedTexture,
+          {
+            id: card.id,
+            name: card.name,
+            value: card.value,
+            ability: card.ability,
+            quote: card.quote,
+            portraitUrl: `/img/${card.value}_${card.type}.png`,
+            cardBackUrl: '/img/card_back_3.png',
+            cardFrontUrl: '/img/card_front_3.png',
+            color: this.parseCardColor(card.color)
+          },
+          `${cardX}px`,
+          '0px'
+        );
+
+        // Make cards visible if local player
+        if (this.isLocalPlayer) {
+          babylonCard.flip(); // Show card face
+        }
+
+        // Add to hand container (this is the key part that was missing!)
+        this.handContainer.addControl(babylonCard.getContainer());
+        this.handCards.push(babylonCard);
+      });
     } else {
+      // No cards - show placeholder
       this.handContainer.background = 'rgba(0, 0, 0, 0.3)';
       this.handContainer.color = '#4b5563';
       this.handContainer.thickness = 1;
+
+      const placeholder = new TextBlock('hand-empty', 'Hand');
+      placeholder.fontSize = 12;
+      placeholder.color = '#9ca3af';
+      this.handContainer.addControl(placeholder);
     }
+  }
+
+  private parseCardColor(tailwindGradient: string): { r: number; g: number; b: number } {
+    // Parse Tailwind gradient to RGB (simplified)
+    const colorMap: Record<string, { r: number; g: number; b: number }> = {
+      'from-slate-700': { r: 51, g: 56, b: 64 },
+      'from-blue-800': { r: 31, g: 61, b: 120 },
+      'from-indigo-800': { r: 51, g: 46, b: 128 },
+      'from-amber-800': { r: 151, g: 89, b: 10 },
+      'from-purple-800': { r: 89, g: 41, b: 143 },
+      'from-cyan-800': { r: 21, g: 115, b: 140 },
+      'from-rose-800': { r: 158, g: 41, b: 92 },
+      'from-red-800': { r: 153, g: 38, b: 38 },
+      'from-yellow-700': { r: 164, g: 132, b: 20 },
+      'from-emerald-800': { r: 6, g: 120, b: 94 },
+      'from-red-950': { r: 89, g: 10, b: 10 }
+    };
+
+    const match = tailwindGradient.match(/from-[\w-]+/);
+    if (match && colorMap[match[0]]) {
+      return colorMap[match[0]];
+    }
+
+    return { r: 77, g: 77, b: 77 }; // Default gray
   }
 
   private animateHighlight(): void {
@@ -590,6 +668,10 @@ class PlayerAreaUI {
   }
 
   public dispose(): void {
+    // Dispose hand cards
+    this.handCards.forEach(card => card.dispose());
+    this.handCards = [];
+    // Dispose container (which will dispose all children)
     this.container.dispose();
   }
 }
