@@ -349,6 +349,166 @@ ornate details, floral, curved decorations, Art Nouveau, purple, gradient, fille
 
 ---
 
+## Diverse Character Versions (_2 suffix)
+
+All _2 versions feature diverse ethnic backgrounds representing thousands of years of human evolution across different galactic sectors with varying environmental conditions, stellar radiation, and founding populations.
+
+### 1_informant_2.png
+
+**Description:** African-descended evolved human with deep brown skin, broad nose, full lips, elongated facial features showing galactic evolution. Mysterious hooded figure combining Earth African heritage with alien adaptation.
+
+**Positive Prompt:**
+```
+Informant character portrait, evolved human from distant galaxy sector, mysterious shadowy figure, hooded silhouette, slate gray and dark colors, deep brown skin with ebony undertones, broad nose, full lips, elongated facial features, slightly larger eyes adapted to different light, African-descended features evolved over millennia, angular cheekbones, Foundation universe sci-fi aesthetic, thousands of years of separate evolution, partially obscured face, ordinary converted follower, dark atmospheric lighting, Isaac Asimov inspired, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, bright, cheerful, colorful, fully visible face, friendly, modern, photorealistic, low quality, blurry, text, watermark, monster, grotesque
+```
+
+### 2_han_pritcher_2.png
+
+**Description:** East Asian-descended military captain with golden-bronze skin, monolid eyes, strong cheekbones, elongated skull from lower gravity evolution. Combines Asian heritage with alien military bearing.
+
+**Positive Prompt:**
+```
+Han Pritcher portrait, evolved human military captain from Foundation worlds, stern officer, blue uniform with medals, East Asian descended features with golden-bronze skin tone, monolid eyes, strong cheekbones, elongated skull shape from generations in lower gravity, subtly different eye spacing, believing loyalty is freely chosen, disciplined face with alien bone structure, short black hair, Foundation universe sci-fi retro futurism, thousands of years separate evolution, determined expression hiding mental conversion, Isaac Asimov inspired, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal human proportions, pale skin, European features, casual clothing, modern, friendly smile, bright colors, photorealistic, low quality, blurry, text, watermark, multiple people, monster, grotesque
+```
+
+### 2_bail_channis_2.png
+
+**Description:** South Asian-descended agent with warm brown skin, sharp intelligent eyes, defined nose and expressive brows. Theatrical strategist showing galactic evolution of South Asian features.
+
+**Positive Prompt:**
+```
+Bail Channis portrait, evolved human Foundation agent, indigo colored scheme, theatrical presence, South Asian descended features with warm brown skin, sharp intelligent eyes, clever strategist with subtly alien features, young agent with adapted bone structure, mysterious smile, elongated features from planetary adaptation, slightly luminous skin from different star radiation, defined nose and expressive brows, sci-fi retro futurism aesthetic, thousands of years galaxy evolution, duplicitous charm, Isaac Asimov Foundation character, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, military uniform, stern, old, bright colors, modern, photorealistic, low quality, blurry, text, watermark, monster, grotesque
+```
+
+### 3_ebling_mis_2.png
+
+**Description:** Middle Eastern-descended scholar with olive-tan skin, thick eyebrows, prominent nose, gray beard. Elderly academic showing galactic evolution of Middle Eastern features with enlarged cranium.
+
+**Positive Prompt:**
+```
+Ebling Mis portrait, evolved human brilliant scholar from Foundation worlds, amber colored scheme, Middle Eastern descended features with olive-tan skin, elderly academic with unusual cranial development from generations of intellectual breeding, exhausted genius with enlarged forehead, thick expressive eyebrows, prominent nose, spectacles over slightly oversized dark eyes, gray beard, racing toward deadly truth, weary expression, alien bone structure in cheeks and jaw, psychohistorian researcher, sci-fi retro futurism aesthetic, thousands of years separate evolution, Isaac Asimov character, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, young, military, healthy, cheerful, bright colors, modern, photorealistic, low quality, blurry, text, watermark, monster, grotesque
+```
+
+### 3_magnifico_2.png
+
+**Description:** Indigenous American-descended performer with rich copper-brown skin, high cheekbones, strong jawline, long flowing dark hair. Theatrical artist showing galactic evolution with iridescent skin quality.
+
+**Positive Prompt:**
+```
+Magnifico Giganticus portrait, evolved human theatrical performer from Foundation, purple colored scheme, Indigenous American descended features with rich copper-brown skin, Visi-Sonor musician with elongated graceful features, high cheekbones, strong jawline, enigmatic entertainer face with subtle iridescent skin tones, compelling performance aura, truth-revealing artist, mysterious performer with adapted alien beauty, long flowing dark hair, slender neck and refined bone structure from artistic breeding, sci-fi retro futurism aesthetic, thousands of years galaxy evolution, Isaac Asimov character, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, scary clown, horror, bright colors, modern, military, academic, photorealistic, low quality, blurry, text, watermark, monster, grotesque
+```
+
+### 4_shielded_mind_2.png
+
+**Description:** Pacific Islander-descended psychic with tan-brown skin, broad nose, full lips, enlarged cranium. Shows advanced mental evolution with translucent cyan-glowing skin quality.
+
+**Positive Prompt:**
+```
+Shielded Mind portrait, evolved human with mental protection from Foundation, cyan colored scheme, Pacific Islander descended features with tan-brown skin, mysterious figure with defensive psychic aura, alien features showing advanced mental development, translucent quality to skin, slightly glowing cyan energy surrounding head, broad nose, full lips, protected thoughts visualization, enlarged cranium suggesting telepathic abilities, mental barrier aesthetic, sci-fi retro futurism, thousands of years psychic evolution, Isaac Asimov inspired, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, specific person, fully detailed face, bright colors, modern, photorealistic, low quality, blurry, text, watermark, weapons, monster, grotesque
+```
+
+### 5_bayta_darell_2.png
+
+**Description:** Latina-descended woman with warm medium-brown skin, dark wavy hair, almond-shaped eyes, defined eyebrows and full lips. Strong maternal figure showing galactic evolution.
+
+**Positive Prompt:**
+```
+Bayta Darell portrait, evolved human woman with intuition immunity from Foundation, rose colored scheme, Latina descended features with warm medium-brown skin, determined female with subtle alien features, strong-willed woman with elongated graceful facial structure, dark wavy hair, searching for the Mule, protective maternal energy, intelligent perceptive almond-shaped eyes slightly larger and more expressive, delicate bone structure from planetary adaptation, defined eyebrows and full lips, sci-fi retro futurism aesthetic, thousands of years galaxy evolution, Isaac Asimov character, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, weak, timid, bright colors, modern fashion, photorealistic, low quality, blurry, text, watermark, multiple people, monster, grotesque
+```
+
+### 5_toran_darell_2.png
+
+**Description:** Mixed-race man with light brown skin, curly dark hair, expressive eyes, showing blended heritage evolved across galaxies. Protective warrior with diverse features.
+
+**Positive Prompt:**
+```
+Toran Darell portrait, evolved human male searcher from Foundation, red colored scheme, mixed race descended features with light brown skin, determined young man with alien bone structure, husband searching for the Mule, touched by psychic power, resolute warrior expression with elongated features, protective stance, curly dark hair, expressive eyes, angular jaw from generations of adaptation, slightly taller cranium, sci-fi retro futurism aesthetic, thousands of years galaxy evolution, Isaac Asimov character, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features only, old, weak, bright colors, modern, military uniform, photorealistic, low quality, blurry, text, watermark, multiple people, monster, grotesque
+```
+
+### 6_mayor_indbur_2.png
+
+**Description:** Southeast Asian-descended political leader with golden-tan skin, strong features, dark hair with gray streaks. Authoritative figure showing nobility through galactic evolution.
+
+**Positive Prompt:**
+```
+Mayor Indbur portrait, evolved human Mayor of Terminus from Foundation, yellow and gold colored scheme, Southeast Asian descended features with golden-tan skin, authoritative political leader with alien nobility features, regal mayoral robes, certain of independence while converted, commanding dignified expression, elongated refined skull suggesting breeding for leadership, strong features, dark hair with gray streaks, prominent cheekbones, Foundation bureaucrat, sci-fi retro futurism aesthetic, thousands of years galaxy evolution, Isaac Asimov character, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, military, casual, young, weak, bright modern colors, photorealistic, low quality, blurry, text, watermark, crown, monster, grotesque
+```
+
+### 7_first_speaker_2.png
+
+**Description:** Black African-descended psychohistorian with deep rich dark skin, broad nose, full lips, dramatically enlarged cranium. Ancient wisdom combined with advanced psychic evolution.
+
+**Positive Prompt:**
+```
+The First Speaker portrait, evolved human Second Foundation leader, emerald green colored scheme, Black African descended features with deep rich dark skin, mysterious psychohistorian master with advanced psychic evolution, hooded enigmatic figure, must remain hidden, wise ancient mentor presence, dramatically enlarged cranium from generations of mental breeding, subtle translucent quality to skin, secretive powerful psychic with elongated features, broad nose, full lips, telepathic adaptation visible in bone structure, sci-fi retro futurism aesthetic, thousands of years psychic evolution, Isaac Asimov Foundation character, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, pale skin, European features, young, visible detailed face, bright colors, modern, photorealistic, low quality, blurry, text, watermark, military, monster, grotesque
+```
+
+### 8_the_mule_2.png
+
+**Description:** Mutant with mixed heritage features uniquely altered by mutation, showing extreme alien evolution. Represents the ultimate expression of galactic diversity combined with genetic mutation.
+
+**Positive Prompt:**
+```
+The Mule character portrait, evolved human powerful mutant from Foundation universe, mysterious psychic conqueror with extreme alien features, pale gaunt face with elongated skull, intense piercing eyes unnaturally large and glowing, psychic energy aura radiating from head, dark hooded cloak, ethereal purple glow, dramatically different bone structure showing mutation, angular alien beauty, mixed heritage features with unique mutation-altered appearance, high cheekbones, sharp features, sci-fi retro futurism aesthetic, regal yet haunting presence, purple and gold color scheme, dramatic lighting, menacing expression, psychohistory disruptor, galactic conqueror, thousands of years evolution plus mutation, high quality digital art, Isaac Asimov Foundation inspired, portrait format
+```
+
+**Negative Prompt:**
+```
+Earth human, normal proportions, friendly, cheerful, bright colors, modern clothing, photorealistic, low quality, blurry, cartoon, anime, multiple faces, deformed ugliness, text, watermark, monster, grotesque horror
+```
+
+---
+
 ## Notes
 
 - All portraits generated on 2025-10-05
@@ -356,3 +516,5 @@ ornate details, floral, curved decorations, Art Nouveau, purple, gradient, fille
 - Output format: PNG at 300 DPI
 - Color schemes match the card definitions in `src/data/cards.ts`
 - Each character's color scheme aligns with their thematic role in the game
+- Version _1: Alien/evolved features without specific ethnic diversity
+- Version _2: Diverse ethnic backgrounds combined with alien evolution features
