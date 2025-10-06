@@ -518,3 +518,25 @@ Earth human, normal proportions, friendly, cheerful, bright colors, modern cloth
 - Each character's color scheme aligns with their thematic role in the game
 - Version _1: Alien/evolved features without specific ethnic diversity
 - Version _2: Diverse ethnic backgrounds combined with alien evolution features
+
+- Version _3: Gender-diverse presentations (gender-swapped, non-binary, agender)
+
+## Gender-Diverse Character Versions (_3 suffix)
+
+All _3 versions feature gender-swapped or gender-diverse presentations including non-binary, agender, and gender-fluid characters representing thousands of years of human evolution where gender presentation has become more fluid and varied across different galactic cultures.
+
+**Gender Presentations:**
+- 1_informant_3: Non-binary androgynous
+- 2_han_pritcher_3: Female (gender-swapped)
+- 2_bail_channis_3: Non-binary gender-fluid
+- 3_ebling_mis_3: Female (gender-swapped)
+- 3_magnifico_3: Non-binary gender-fluid
+- 4_shielded_mind_3: Agender (beyond binary)
+- 5_bayta_darell_3: Male (gender-swapped)
+- 5_toran_darell_3: Non-binary
+- 6_mayor_indbur_3: Female (gender-swapped)
+- 7_first_speaker_3: Non-binary gender-transcendent
+- 8_the_mule_3: Agender entity beyond gender concepts
+
+All prompts for _3 versions include ethnic diversity from _2 versions combined with gender-diverse presentations. Prompts emphasize androgynous features, gender-neutral or gender-fluid appearances, and explicitly avoid gendered stereotypes in negative prompts.
+
