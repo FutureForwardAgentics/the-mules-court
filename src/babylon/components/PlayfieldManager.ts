@@ -7,7 +7,7 @@ import {
   Control,
   StackPanel
 } from '@babylonjs/gui';
-import { BabylonCard, CardConfig } from './BabylonCard';
+import { BabylonCard } from './BabylonCard';
 import type { GameState, Player, Card } from '../../types/game';
 
 interface PlayerAreaLayout {
