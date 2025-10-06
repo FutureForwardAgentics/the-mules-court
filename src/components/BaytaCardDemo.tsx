@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Scene } from '@babylonjs/core';
 import { AdvancedDynamicTexture } from '@babylonjs/gui';
 import { BabylonCanvas } from '../babylon/engine/BabylonCanvas';
-import { BabylonCard, CardConfig } from '../babylon/components/BabylonCard';
+import { BabylonCard, type CardConfig } from '../babylon/components/BabylonCard';
 
 /**
  * BaytaCardDemo

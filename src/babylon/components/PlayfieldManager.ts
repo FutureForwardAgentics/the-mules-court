@@ -4,11 +4,10 @@ import {
   Rectangle,
   Image,
   TextBlock,
-  Control,
   StackPanel
 } from '@babylonjs/gui';
 import { BabylonCard } from './BabylonCard';
-import type { GameState, Player, Card } from '../../types/game';
+import type { GameState, Player } from '../../types/game';
 
 interface PlayerAreaLayout {
   x: number;

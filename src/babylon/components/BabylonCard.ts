@@ -1,4 +1,4 @@
-import { Scene, Animation, AnimationGroup, Color3, Color4 } from '@babylonjs/core';
+import { Scene } from '@babylonjs/core';
 import {
   AdvancedDynamicTexture,
   Rectangle,
