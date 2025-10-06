@@ -1,4 +1,4 @@
-import { Scene } from '@babylonjs/core';
+import { Scene, FreeCamera, Vector3 } from '@babylonjs/core';
 import {
   AdvancedDynamicTexture,
   Rectangle,
@@ -43,6 +43,11 @@ export class PlayfieldManager {
   constructor(scene: Scene, advancedTexture: AdvancedDynamicTexture) {
     this.scene = scene;
     this.advancedTexture = advancedTexture;
+
+    // Create camera (required for BabylonJS scene rendering)
+    const camera = new FreeCamera('playfield-camera', new Vector3(0, 0, -10), scene);
+    camera.setTarget(Vector3.Zero());
+    scene.activeCamera = camera;
 
     // Create background
     this.backgroundImage = new Image('playfield-bg', '/img/playfield_background_space.png');
