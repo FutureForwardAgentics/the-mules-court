@@ -91,11 +91,16 @@ export class BabylonCardMesh {
     this.backMesh.rotation = new Vector3(0, Math.PI, 0);
 
     // Set initial position and rotation for front mesh (parent)
+    // Rotate 180° on Y axis so FRONTSIDE faces camera
     this.mesh.position = config.position;
     if (config.rotation) {
-      this.mesh.rotation = config.rotation;
+      this.mesh.rotation = new Vector3(
+        config.rotation.x,
+        config.rotation.y + Math.PI,
+        config.rotation.z
+      );
     } else {
-      this.mesh.rotation = new Vector3(0.1, 0, 0); // Default slight tilt
+      this.mesh.rotation = new Vector3(0.1, Math.PI, 0); // Default: slight X tilt + 180° Y rotation
     }
 
     // Enable shadow casting if shadow generator provided
@@ -312,11 +317,15 @@ export class BabylonCardMesh {
     this.mesh.scaling = new Vector3(1.0, 1.0, 1.0);
     this.mesh.position.z -= 0.5; // Lower back
 
-    // Reset rotation
+    // Reset rotation (including 180° Y rotation to face camera)
     if (this.config.rotation) {
-      this.mesh.rotation = this.config.rotation.clone();
+      this.mesh.rotation = new Vector3(
+        this.config.rotation.x,
+        this.config.rotation.y + Math.PI,
+        this.config.rotation.z
+      );
     } else {
-      this.mesh.rotation = new Vector3(0.1, 0, 0);
+      this.mesh.rotation = new Vector3(0.1, Math.PI, 0);
     }
 
     // Reset brightness (only for StandardMaterial)
