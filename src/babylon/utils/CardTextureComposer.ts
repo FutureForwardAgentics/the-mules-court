@@ -5,7 +5,7 @@ import type { Card } from '../../types/game';
  * CardTextureComposer
  *
  * Composes card textures dynamically using canvas 2D API.
- * Loads card_front_1.png template and overlays:
+ * Loads card-front/card_front_1.png template and overlays:
  * - Value number (top left)
  * - Name text (top center banner)
  * - Portrait image (top half)
@@ -30,14 +30,14 @@ export class CardTextureComposer {
     this.templateImage.onload = () => {
       this.templateLoaded = true;
     };
-    this.templateImage.src = '/img/card_front_1.png';
+    this.templateImage.src = '/img/card-front/card_front_1.png';
   }
 
   /**
    * Create a composed card texture for the given card
-   * High resolution (1024x1536) for crisp text rendering
+   * Ultra high resolution (2048x3072) for maximum text clarity
    */
-  public async createCardTexture(card: Card, width: number = 1024, height: number = 1536): Promise<DynamicTexture> {
+  public async createCardTexture(card: Card, width: number = 2048, height: number = 3072): Promise<DynamicTexture> {
     // Wait for template to load
     if (!this.templateLoaded) {
       await this.waitForTemplate();
@@ -45,6 +45,10 @@ export class CardTextureComposer {
 
     const texture = new DynamicTexture(`card-texture-${card.id}`, { width, height }, this.scene, false);
     const ctx = texture.getContext() as unknown as CanvasRenderingContext2D;
+
+    // Enable high-quality rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
 
     // Clear canvas
     ctx.fillStyle = '#1a1a2e';
@@ -66,7 +70,7 @@ export class CardTextureComposer {
 
       // Draw portrait with rounded corners effect (clip)
       ctx.save();
-      this.roundRect(ctx, portraitX, portraitY, portraitWidth, portraitHeight, 30);
+      this.roundRect(ctx, portraitX, portraitY, portraitWidth, portraitHeight, 60);
       ctx.clip();
       ctx.drawImage(portraitImage, portraitX, portraitY, portraitWidth, portraitHeight);
       ctx.restore();
@@ -116,19 +120,19 @@ export class CardTextureComposer {
     // Draw background circle
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.beginPath();
-    ctx.arc(x, y, 80, 0, Math.PI * 2);
+    ctx.arc(x, y, 160, 0, Math.PI * 2);
     ctx.fill();
 
     // Draw gold border
     ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 6;
+    ctx.lineWidth = 12;
     ctx.beginPath();
-    ctx.arc(x, y, 80, 0, Math.PI * 2);
+    ctx.arc(x, y, 160, 0, Math.PI * 2);
     ctx.stroke();
 
     // Draw value text
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 96px Arial, sans-serif';
+    ctx.font = 'bold 192px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(value.toString(), x, y);
@@ -143,12 +147,12 @@ export class CardTextureComposer {
 
     // Draw semi-transparent background banner
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(width * 0.2, y - 50, width * 0.6, 100);
+    ctx.fillRect(width * 0.2, y - 100, width * 0.6, 200);
 
     // Draw name with text outline for visibility
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 8;
-    ctx.font = 'bold 64px Arial, sans-serif';
+    ctx.lineWidth = 16;
+    ctx.font = 'bold 128px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.strokeText(name, x, y);
@@ -159,6 +163,7 @@ export class CardTextureComposer {
 
   /**
    * Draw ability text in bottom half
+   * Ultra high resolution for maximum readability
    */
   private drawAbility(ctx: CanvasRenderingContext2D, ability: string, width: number, height: number): void {
     const padding = width * 0.08;
@@ -167,13 +172,13 @@ export class CardTextureComposer {
 
     // Draw semi-transparent background
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(padding - 20, startY - 30, maxWidth + 40, height * 0.28);
+    ctx.fillRect(padding - 40, startY - 60, maxWidth + 80, height * 0.28);
 
-    // Word wrap the ability text
+    // Word wrap the ability text with high-quality rendering
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 4;
-    ctx.font = '40px Arial, sans-serif';
+    ctx.lineWidth = 8;
+    ctx.font = 'bold 80px Arial, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
@@ -197,8 +202,8 @@ export class CardTextureComposer {
       lines.push(currentLine);
     }
 
-    // Draw each line with outline
-    const lineHeight = 52;
+    // Draw each line with thick outline for better readability
+    const lineHeight = 104;
     lines.forEach((line, index) => {
       const y = startY + (index * lineHeight);
 

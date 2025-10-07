@@ -180,7 +180,7 @@ export class BabylonCardMesh {
         }
       } else {
         // Card back - use static texture
-        const backTexture = new Texture('/img/card_back_3.png', this.scene);
+        const backTexture = new Texture('/img/card-back/card_back_3.png', this.scene);
         const backMaterial = new StandardMaterial(
           `back-material-${this.config.card.id}`,
           this.scene
