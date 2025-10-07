@@ -3,6 +3,9 @@ import { useGameWithAI } from "./hooks/useGameWithAI";
 import { GameBoard } from "./components/GameBoard";
 import { SessionViewer } from "./components/SessionViewer";
 import { BabylonEffects } from "./components/BabylonEffects";
+import { BabylonCard3DDemo } from "./components/BabylonCard3DDemo";
+import { CardShowcase } from "./components/CardShowcase";
+import { PlayingBoard } from "./components/PlayingBoard";
 import {
   BabylonEffectsProvider,
   useBabylonEffects,
@@ -15,6 +18,22 @@ function App() {
   const [playerCount, setPlayerCount] = useState(2);
 
   console.log("Game state:", { gameStarted, playerCount });
+
+  // Check for demo mode via URL parameter
+  const params = new URLSearchParams(window.location.search);
+  const demo = params.get('demo');
+
+  if (demo === '3d') {
+    return <BabylonCard3DDemo />;
+  }
+
+  if (demo === 'cards') {
+    return <CardShowcase />;
+  }
+
+  if (demo === 'board') {
+    return <PlayingBoard />;
+  }
 
   return (
     <BabylonEffectsProvider>

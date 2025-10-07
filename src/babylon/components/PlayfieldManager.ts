@@ -1,14 +1,14 @@
-import { Scene, FreeCamera, Vector3 } from '@babylonjs/core';
+import { Scene, FreeCamera, Vector3, HemisphericLight, DirectionalLight, ShadowGenerator, Color3 } from '@babylonjs/core';
 import {
   AdvancedDynamicTexture,
   Rectangle,
   Image,
   TextBlock,
-  Control,
   StackPanel
 } from '@babylonjs/gui';
 import { BabylonCard } from './BabylonCard';
-import type { GameState, Player, Card } from '../../types/game';
+import { BabylonCardMesh } from './BabylonCardMesh';
+import type { GameState, Player } from '../../types/game';
 
 interface PlayerAreaLayout {
   x: number;
@@ -32,22 +32,30 @@ export class PlayfieldManager {
   private advancedTexture: AdvancedDynamicTexture;
   private backgroundImage: Image;
   private deckContainer: Rectangle;
-  private deckImage: Image;
-  private deckCountText: TextBlock;
+  private deckImage!: Image; // Will be initialized in createDeckArea()
+  private deckCountText!: TextBlock; // Will be initialized in createDeckArea()
   private playerAreas: Map<string, PlayerAreaUI> = new Map();
   private playerCards: Map<string, BabylonCard[]> = new Map();
-  private centerInfoPanel: Rectangle;
-  private phaseText: TextBlock;
-  private currentPlayerText: TextBlock;
+  private centerInfoPanel!: Rectangle; // Will be initialized in createCenterInfoPanel()
+  private phaseText!: TextBlock; // Will be initialized in createCenterInfoPanel()
+  private currentPlayerText!: TextBlock; // Will be initialized in createCenterInfoPanel()
+  private previousHandSizes: Map<string, number> = new Map(); // Track hand sizes for animation
+  private onCardClick?: (cardId: string) => void; // Card click handler
+  private shadowGenerator: ShadowGenerator; // For card shadows
+  private use3DCards: boolean = true; // Toggle for 3D vs GUI cards
+
 
   constructor(scene: Scene, advancedTexture: AdvancedDynamicTexture) {
     this.scene = scene;
     this.advancedTexture = advancedTexture;
 
-    // Create camera (required for BabylonJS scene rendering)
-    const camera = new FreeCamera('playfield-camera', new Vector3(0, 0, -10), scene);
-    camera.setTarget(Vector3.Zero());
+    // Create camera with better positioning for 2.5D
+    const camera = new FreeCamera('playfield-camera', new Vector3(0, -5, -20), scene);
+    camera.setTarget(new Vector3(0, 0, 0));
     scene.activeCamera = camera;
+
+    // Add lighting for 3D depth
+    this.shadowGenerator = this.setupLighting(scene);
 
     // Create background
     this.backgroundImage = new Image('playfield-bg', '/img/playfield_background_space.png');
@@ -148,70 +156,94 @@ export class PlayfieldManager {
   }
 
   /**
+   * Setup lighting for 3D card depth and shadows
+   */
+  private setupLighting(scene: Scene): ShadowGenerator {
+    // Hemispheric light for ambient lighting
+    const ambientLight = new HemisphericLight('ambient-light', new Vector3(0, 1, 0), scene);
+    ambientLight.intensity = 0.6;
+    ambientLight.diffuse = new Color3(0.8, 0.8, 1.0); // Slight blue tint
+    ambientLight.groundColor = new Color3(0.3, 0.3, 0.4);
+
+    // Directional light for shadows and depth
+    const mainLight = new DirectionalLight('main-light', new Vector3(-0.5, -1, -0.3), scene);
+    mainLight.intensity = 0.8;
+    mainLight.position = new Vector3(10, 20, 10);
+
+    // Create shadow generator
+    const shadowGenerator = new ShadowGenerator(1024, mainLight);
+    shadowGenerator.useBlurExponentialShadowMap = true;
+    shadowGenerator.blurKernel = 32;
+
+    return shadowGenerator;
+  }
+
+  /**
    * Calculate player area positions based on player count
+   * 2.5D perspective: players further away appear smaller/higher
    */
   private calculatePlayerLayouts(playerCount: number): PlayerAreaLayout[] {
     const layouts: PlayerAreaLayout[] = [];
 
     if (playerCount === 2) {
-      // Horizontal split: bottom vs top
+      // Horizontal split: bottom (close) vs top (far) with perspective
       layouts.push({
-        x: 0, y: 200,       // Player 1 bottom center
-        handX: 0, handY: 250,
-        nameX: 0, nameY: 150,
-        tokensX: 200, tokensY: 150
+        x: 0, y: 260,       // Player 1 bottom center (closer - larger)
+        handX: 0, handY: 310,
+        nameX: 0, nameY: 210,
+        tokensX: 250, tokensY: 210
       });
       layouts.push({
-        x: 0, y: -200,      // Player 2 top center
-        handX: 0, handY: -250,
-        nameX: 0, nameY: -150,
-        tokensX: 200, tokensY: -150
+        x: 0, y: -260,      // Player 2 top center (farther - smaller)
+        handX: 0, handY: -310,
+        nameX: 0, nameY: -210,
+        tokensX: 250, tokensY: -210
       });
     } else if (playerCount === 3) {
-      // Triangular: bottom center, top left, top right
+      // Triangular: bottom center (close), top left/right (far)
       layouts.push({
-        x: 0, y: 220,       // Player 1 bottom
-        handX: 0, handY: 270,
-        nameX: 0, nameY: 170,
-        tokensX: 200, tokensY: 170
+        x: 0, y: 280,       // Player 1 bottom (closest)
+        handX: 0, handY: 330,
+        nameX: 0, nameY: 230,
+        tokensX: 250, tokensY: 230
       });
       layouts.push({
-        x: -300, y: -150,   // Player 2 top left
-        handX: -300, handY: -200,
-        nameX: -300, nameY: -100,
-        tokensX: -100, tokensY: -100
+        x: -380, y: -200,   // Player 2 top left (far)
+        handX: -380, handY: -250,
+        nameX: -380, nameY: -150,
+        tokensX: -180, tokensY: -150
       });
       layouts.push({
-        x: 300, y: -150,    // Player 3 top right
-        handX: 300, handY: -200,
-        nameX: 300, nameY: -100,
-        tokensX: 500, tokensY: -100
+        x: 380, y: -200,    // Player 3 top right (far)
+        handX: 380, handY: -250,
+        nameX: 380, nameY: -150,
+        tokensX: 580, tokensY: -150
       });
     } else { // 4 players
-      // Quadrant: bottom, left, top, right
+      // Quadrant: bottom (close), left/right (mid), top (far)
       layouts.push({
-        x: 0, y: 240,       // Player 1 bottom
-        handX: 0, handY: 290,
-        nameX: 0, nameY: 190,
-        tokensX: 200, tokensY: 190
+        x: 0, y: 300,       // Player 1 bottom (closest)
+        handX: 0, handY: 350,
+        nameX: 0, nameY: 250,
+        tokensX: 250, tokensY: 250
       });
       layouts.push({
-        x: -350, y: 0,      // Player 2 left
-        handX: -400, handY: 0,
-        nameX: -300, nameY: -50,
-        tokensX: -150, tokensY: -50
+        x: -430, y: 20,     // Player 2 left (mid-distance)
+        handX: -480, handY: 20,
+        nameX: -380, nameY: -30,
+        tokensX: -230, tokensY: -30
       });
       layouts.push({
-        x: 0, y: -240,      // Player 3 top
-        handX: 0, handY: -290,
-        nameX: 0, nameY: -190,
-        tokensX: 200, tokensY: -190
+        x: 0, y: -300,      // Player 3 top (farthest)
+        handX: 0, handY: -350,
+        nameX: 0, nameY: -250,
+        tokensX: 250, tokensY: -250
       });
       layouts.push({
-        x: 350, y: 0,       // Player 4 right
-        handX: 400, handY: 0,
-        nameX: 300, nameY: -50,
-        tokensX: 550, tokensY: -50
+        x: 430, y: 20,      // Player 4 right (mid-distance)
+        handX: 480, handY: 20,
+        nameX: 380, nameY: -30,
+        tokensX: 630, tokensY: -30
       });
     }
 
@@ -233,6 +265,23 @@ export class PlayfieldManager {
 
     // Update or create player areas
     this.updatePlayerAreas(gameState);
+  }
+
+  /**
+   * Get deck container position for animations
+   */
+  public getDeckPosition(): { x: number; y: number } {
+    return {
+      x: parseFloat(this.deckContainer.left as string) || 0,
+      y: parseFloat(this.deckContainer.top as string) || 0
+    };
+  }
+
+  /**
+   * Set card click handler for game interaction
+   */
+  public setCardClickHandler(handler: (cardId: string) => void): void {
+    this.onCardClick = handler;
   }
 
   private updateDeckWithAnimation(gameState: GameState): void {
@@ -339,17 +388,27 @@ export class PlayfieldManager {
 
       // Get or create player area
       let playerArea = this.playerAreas.get(player.id);
+      const previousHandSize = this.previousHandSizes.get(player.id);
+
       if (!playerArea) {
         playerArea = new PlayerAreaUI(
           this.scene,
           this.advancedTexture,
           player,
           layout,
-          index === 0 // Assume player 0 is local player
+          index === 0, // Assume player 0 is local player
+          this.onCardClick,
+          index, // Pass player index for perspective scaling
+          this.shadowGenerator,
+          this.use3DCards
         );
         this.playerAreas.set(player.id, playerArea);
+        // Initialize previous hand size to prevent false animation on first update
+        this.previousHandSizes.set(player.id, player.hand.length);
       } else {
-        playerArea.update(player, gameState.currentPlayerIndex === index);
+        playerArea.update(player, gameState.currentPlayerIndex === index, previousHandSize, this.onCardClick);
+        // Update tracked hand size AFTER update
+        this.previousHandSizes.set(player.id, player.hand.length);
       }
     });
   }
@@ -382,29 +441,53 @@ class PlayerAreaUI {
   private statusText: TextBlock;
   private tokenContainer: StackPanel;
   private handContainer: Rectangle;
+  private handCards: BabylonCard[] = [];
+  private handMeshCards: BabylonCardMesh[] = []; // 3D mesh cards
+  private discardContainer: Rectangle;
+  private discardCards: BabylonCard[] = [];
+  private discardMeshCards: BabylonCardMesh[] = []; // 3D mesh discard cards
   private isLocalPlayer: boolean;
+  private shadowGenerator?: ShadowGenerator;
+  private use3DCards: boolean;
 
   constructor(
     scene: Scene,
     advancedTexture: AdvancedDynamicTexture,
     player: Player,
     layout: PlayerAreaLayout,
-    isLocalPlayer: boolean
+    isLocalPlayer: boolean,
+    onCardClick?: (cardId: string) => void,
+    playerIndex: number = 0,
+    shadowGenerator?: ShadowGenerator,
+    use3DCards: boolean = true
   ) {
     this.scene = scene;
     this.advancedTexture = advancedTexture;
     this.isLocalPlayer = isLocalPlayer;
+    this.shadowGenerator = shadowGenerator;
+    this.use3DCards = use3DCards;
 
-    // Create main container
+    // Calculate perspective scale (player 0 is closest = 1.0, others scale down)
+    const perspectiveScale = playerIndex === 0 ? 1.0 : 0.85;
+
+    // Create main container (larger for better visibility and depth)
     this.container = new Rectangle(`player-${player.id}-container`);
-    this.container.width = '300px';
-    this.container.height = '180px';
-    this.container.thickness = 2;
-    this.container.cornerRadius = 10;
+    this.container.width = '400px'; // Increased from 300px
+    this.container.height = '240px'; // Increased from 180px
+    this.container.thickness = 3; // Thicker border
+    this.container.cornerRadius = 15; // Rounder corners
     this.container.color = '#6b7280';
-    this.container.background = 'rgba(0, 0, 0, 0.6)';
+    this.container.background = 'rgba(0, 0, 0, 0.7)'; // Slightly more opaque
     this.container.left = `${layout.x}px`;
     this.container.top = `${layout.y}px`;
+    // Apply perspective scaling
+    this.container.scaleX = perspectiveScale;
+    this.container.scaleY = perspectiveScale;
+    // Add shadow effect for depth
+    this.container.shadowBlur = 20;
+    this.container.shadowOffsetX = 0;
+    this.container.shadowOffsetY = 10;
+    this.container.shadowColor = 'rgba(0, 0, 0, 0.5)';
     advancedTexture.addControl(this.container);
 
     // Player name
@@ -448,15 +531,15 @@ class PlayerAreaUI {
     this.tokenContainer.top = '40px';
     this.container.addControl(this.tokenContainer);
 
-    // Hand placeholder
+    // Hand placeholder (larger for bigger cards)
     this.handContainer = new Rectangle(`player-${player.id}-hand`);
-    this.handContainer.width = '150px';
-    this.handContainer.height = '60px';
-    this.handContainer.thickness = 1;
-    this.handContainer.cornerRadius = 5;
+    this.handContainer.width = '250px'; // Increased from 150px
+    this.handContainer.height = '160px'; // Increased from 60px
+    this.handContainer.thickness = 2;
+    this.handContainer.cornerRadius = 10;
     this.handContainer.color = '#4b5563';
     this.handContainer.background = 'rgba(0, 0, 0, 0.3)';
-    this.handContainer.top = '50px';
+    this.handContainer.top = '60px';
     this.container.addControl(this.handContainer);
 
     const handLabel = new TextBlock(`player-${player.id}-hand-label`, 'Hand');
@@ -464,11 +547,28 @@ class PlayerAreaUI {
     handLabel.color = '#9ca3af';
     this.handContainer.addControl(handLabel);
 
+    // Discard pile (played cards) - larger for better visibility
+    this.discardContainer = new Rectangle(`player-${player.id}-discard`);
+    this.discardContainer.width = '120px'; // Increased from 100px
+    this.discardContainer.height = '130px'; // Increased from 80px
+    this.discardContainer.thickness = 2;
+    this.discardContainer.cornerRadius = 10;
+    this.discardContainer.color = '#6b7280';
+    this.discardContainer.background = 'rgba(0, 0, 0, 0.3)';
+    this.discardContainer.top = '-70px';
+    this.discardContainer.left = '130px';
+    this.container.addControl(this.discardContainer);
+
+    const discardLabel = new TextBlock(`player-${player.id}-discard-label`, 'Played');
+    discardLabel.fontSize = 10;
+    discardLabel.color = '#9ca3af';
+    this.discardContainer.addControl(discardLabel);
+
     // Initial update
-    this.update(player, false);
+    this.update(player, false, undefined, onCardClick);
   }
 
-  public update(player: Player, isCurrentPlayer: boolean): void {
+  public update(player: Player, isCurrentPlayer: boolean, previousHandSize?: number, onCardClick?: (cardId: string) => void): void {
     // Update border based on current player with animation
     if (isCurrentPlayer) {
       this.container.color = '#ef4444'; // Red
@@ -519,17 +619,304 @@ class PlayerAreaUI {
       this.tokenContainer.addControl(tokenImage);
     }
 
-    // Update hand info with glow effect
-    const handCount = player.hand.length;
-    if (handCount > 0) {
-      this.handContainer.background = 'rgba(147, 51, 234, 0.3)';
-      this.handContainer.color = '#a78bfa';
-      this.handContainer.thickness = 2;
+    // Check if a new card was drawn
+    const handSizeIncreased = previousHandSize !== undefined && player.hand.length > previousHandSize;
+
+    // Update hand cards - RENDER ACTUAL CARDS
+    this.updateHandCards(player, handSizeIncreased, onCardClick);
+
+    // Update discard pile
+    this.updateDiscardPile(player);
+  }
+
+  /**
+   * Helper to convert 2D pixel position to 3D world position
+   */
+  private pixelTo3D(pixelX: number, pixelY: number, z: number = 0): Vector3 {
+    // Simple conversion: pixels to world units
+    // Assuming screen center is (0,0) and scaling down
+    const worldX = pixelX / 100; // Scale factor
+    const worldY = -pixelY / 100; // Invert Y for 3D space
+    return new Vector3(worldX, worldY, z);
+  }
+
+  private updateHandCards(player: Player, animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
+    if (this.use3DCards) {
+      // Use 3D mesh cards
+      this.update3DHandCards(player, animateNewCard, onCardClick);
     } else {
+      // Use GUI cards (original implementation)
+      this.updateGUIHandCards(player, animateNewCard, onCardClick);
+    }
+  }
+
+  private update3DHandCards(player: Player, _animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
+    // Clear existing 3D cards
+    this.handMeshCards.forEach(card => card.dispose());
+    this.handMeshCards = [];
+
+    const handCount = player.hand.length;
+
+    if (handCount > 0) {
+      // Hide hand container background for 3D cards
+      this.handContainer.background = 'rgba(0, 0, 0, 0)';
+      this.handContainer.color = 'transparent';
+      this.handContainer.thickness = 0;
+
+      // Calculate 3D positions
+      const cardSpacing = 2.5; // World units
+      const startX = -(handCount - 1) * cardSpacing / 2;
+
+      // Get container world position (approximate from layout)
+      const containerWorldPos = this.pixelTo3D(
+        parseFloat(this.container.left as string) || 0,
+        parseFloat(this.container.top as string) + 60 || 0, // Offset for hand area
+        0
+      );
+
+      player.hand.forEach((card, index) => {
+        const xOffset = startX + (index * cardSpacing);
+        const position = new Vector3(
+          containerWorldPos.x + xOffset,
+          containerWorldPos.y,
+          containerWorldPos.z
+        );
+
+        const meshCard = new BabylonCardMesh(this.scene, {
+          card,
+          size: 'medium',
+          isRevealed: this.isLocalPlayer,
+          isInteractive: this.isLocalPlayer,
+          position,
+          onCardClick: onCardClick ? () => onCardClick(card.id) : undefined,
+          rotation: new Vector3(0.1, 0, 0), // Slight tilt
+          shadowGenerator: this.shadowGenerator
+        });
+
+        this.handMeshCards.push(meshCard);
+      });
+    }
+  }
+
+  private updateGUIHandCards(player: Player, animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
+    // Clear existing cards
+    this.handCards.forEach(card => card.dispose());
+    this.handCards = [];
+    this.handContainer.clearControls();
+
+    const handCount = player.hand.length;
+
+    if (handCount > 0) {
+      // Hide hand container background when cards are present
+      this.handContainer.background = 'rgba(0, 0, 0, 0)'; // Transparent
+      this.handContainer.color = 'transparent';
+      this.handContainer.thickness = 0;
+
+      // Calculate card positions (larger cards in hand for better visibility)
+      const cardWidth = 100; // Increased from 60
+      const cardHeight = 150; // Increased from 90
+      const cardSpacing = 15; // Increased spacing
+      const totalWidth = (cardWidth * handCount) + (cardSpacing * (handCount - 1));
+      const startX = -(totalWidth / 2) + (cardWidth / 2); // Center the row
+
+      player.hand.forEach((card, index) => {
+        const cardX = startX + (index * (cardWidth + cardSpacing));
+        const isNewCard = animateNewCard && index === handCount - 1; // Last card is the new one
+
+        const babylonCard = new BabylonCard(
+          this.scene,
+          this.advancedTexture,
+          {
+            id: card.id,
+            name: card.name,
+            value: card.value,
+            ability: card.ability,
+            quote: card.quote,
+            portraitUrl: `/img/${card.value}_${card.type}.png`,
+            cardBackUrl: '/img/card_back_3.png',
+            cardFrontUrl: '/img/card_front_3.png',
+            color: this.parseCardColor(card.color),
+            onClick: this.isLocalPlayer && onCardClick ? () => onCardClick(card.id) : undefined
+          },
+          `${cardX}px`,
+          '0px'
+        );
+
+        // Scale down cards for hand (they're 200x300 by default)
+        const cardContainer = babylonCard.getContainer();
+        cardContainer.widthInPixels = cardWidth;
+        cardContainer.heightInPixels = cardHeight;
+
+        // Make cards visible if local player
+        if (this.isLocalPlayer) {
+          babylonCard.flip(); // Show card face
+        }
+
+        // Add whimsical entrance animation for new cards
+        if (isNewCard) {
+          this.animateCardDraw(cardContainer);
+        }
+
+        // Add to hand container
+        this.handContainer.addControl(cardContainer);
+        this.handCards.push(babylonCard);
+      });
+    } else {
+      // No cards - show placeholder
       this.handContainer.background = 'rgba(0, 0, 0, 0.3)';
       this.handContainer.color = '#4b5563';
       this.handContainer.thickness = 1;
+
+      const placeholder = new TextBlock('hand-empty', 'Hand');
+      placeholder.fontSize = 12;
+      placeholder.color = '#9ca3af';
+      this.handContainer.addControl(placeholder);
     }
+  }
+
+  /**
+   * Whimsical card draw animation
+   * - Starts small and grows
+   * - Bouncy entrance with rotation
+   * - Slight sparkle effect via opacity
+   */
+  private animateCardDraw(cardContainer: Rectangle): void {
+    const duration = 600; // milliseconds
+    const startTime = Date.now();
+
+    // Initial state: small, slightly rotated
+    cardContainer.scaleX = 0.1;
+    cardContainer.scaleY = 0.1;
+    cardContainer.rotation = Math.PI * 0.25; // 45 degrees
+    cardContainer.alpha = 0;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Bounce easing (overshoot then settle)
+      const eased = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+      // Scale with bounce (overshoot to 1.15 then settle to 1.0)
+      const bounceScale = eased < 0.8
+        ? eased * 1.4
+        : 1.15 - (eased - 0.8) * 0.75;
+
+      cardContainer.scaleX = bounceScale;
+      cardContainer.scaleY = bounceScale;
+
+      // Rotation: spin in then settle
+      cardContainer.rotation = (1 - progress) * Math.PI * 0.25;
+
+      // Opacity: fade in with sparkle
+      cardContainer.alpha = Math.min(progress * 1.5, 1.0);
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        // Final state
+        cardContainer.scaleX = 1.0;
+        cardContainer.scaleY = 1.0;
+        cardContainer.rotation = 0;
+        cardContainer.alpha = 1.0;
+      }
+    };
+
+    animate();
+  }
+
+  /**
+   * Update discard pile with stacked cards showing values
+   */
+  private updateDiscardPile(player: Player): void {
+    // Clear existing discard cards
+    this.discardCards.forEach(card => card.dispose());
+    this.discardCards = [];
+    this.discardContainer.clearControls();
+
+    const discardCount = player.discardPile.length;
+
+    if (discardCount > 0) {
+      // Hide placeholder background
+      this.discardContainer.background = 'rgba(0, 0, 0, 0)';
+      this.discardContainer.color = 'transparent';
+      this.discardContainer.thickness = 0;
+
+      // Stack cards with slight offset to show values (larger for visibility)
+      const cardWidth = 70; // Increased from 50
+      const cardHeight = 105; // Increased from 75
+      const stackOffset = 20; // Increased offset for better visibility
+
+      player.discardPile.forEach((card, index) => {
+        const cardY = -(discardCount - 1 - index) * stackOffset; // Stack from bottom to top
+
+        const babylonCard = new BabylonCard(
+          this.scene,
+          this.advancedTexture,
+          {
+            id: `discard-${card.id}`,
+            name: card.name,
+            value: card.value,
+            ability: card.ability,
+            quote: card.quote,
+            portraitUrl: `/img/${card.value}_${card.type}.png`,
+            cardBackUrl: '/img/card_back_3.png',
+            cardFrontUrl: '/img/card_front_3.png',
+            color: this.parseCardColor(card.color)
+          },
+          '0px',
+          `${cardY}px`
+        );
+
+        // Scale down for discard pile
+        const cardContainer = babylonCard.getContainer();
+        cardContainer.widthInPixels = cardWidth;
+        cardContainer.heightInPixels = cardHeight;
+
+        // Always show face for discard pile
+        babylonCard.flip();
+
+        // Add to discard container
+        this.discardContainer.addControl(cardContainer);
+        this.discardCards.push(babylonCard);
+      });
+    } else {
+      // No cards - show placeholder
+      this.discardContainer.background = 'rgba(0, 0, 0, 0.3)';
+      this.discardContainer.color = '#6b7280';
+      this.discardContainer.thickness = 1;
+
+      const placeholder = new TextBlock('discard-empty', 'Played');
+      placeholder.fontSize = 10;
+      placeholder.color = '#9ca3af';
+      this.discardContainer.addControl(placeholder);
+    }
+  }
+
+  private parseCardColor(tailwindGradient: string): { r: number; g: number; b: number } {
+    // Parse Tailwind gradient to RGB (simplified)
+    const colorMap: Record<string, { r: number; g: number; b: number }> = {
+      'from-slate-700': { r: 51, g: 56, b: 64 },
+      'from-blue-800': { r: 31, g: 61, b: 120 },
+      'from-indigo-800': { r: 51, g: 46, b: 128 },
+      'from-amber-800': { r: 151, g: 89, b: 10 },
+      'from-purple-800': { r: 89, g: 41, b: 143 },
+      'from-cyan-800': { r: 21, g: 115, b: 140 },
+      'from-rose-800': { r: 158, g: 41, b: 92 },
+      'from-red-800': { r: 153, g: 38, b: 38 },
+      'from-yellow-700': { r: 164, g: 132, b: 20 },
+      'from-emerald-800': { r: 6, g: 120, b: 94 },
+      'from-red-950': { r: 89, g: 10, b: 10 }
+    };
+
+    const match = tailwindGradient.match(/from-[\w-]+/);
+    if (match && colorMap[match[0]]) {
+      return colorMap[match[0]];
+    }
+
+    return { r: 77, g: 77, b: 77 }; // Default gray
   }
 
   private animateHighlight(): void {
@@ -590,6 +977,19 @@ class PlayerAreaUI {
   }
 
   public dispose(): void {
+    // Dispose GUI hand cards
+    this.handCards.forEach(card => card.dispose());
+    this.handCards = [];
+    // Dispose 3D mesh hand cards
+    this.handMeshCards.forEach(card => card.dispose());
+    this.handMeshCards = [];
+    // Dispose GUI discard cards
+    this.discardCards.forEach(card => card.dispose());
+    this.discardCards = [];
+    // Dispose 3D mesh discard cards
+    this.discardMeshCards.forEach(card => card.dispose());
+    this.discardMeshCards = [];
+    // Dispose container (which will dispose all children)
     this.container.dispose();
   }
 }

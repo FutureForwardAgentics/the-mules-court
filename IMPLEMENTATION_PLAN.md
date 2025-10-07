@@ -1,553 +1,375 @@
-# PixiJS Card Graphics Implementation Plan
+# Holographic Card Shader Implementation Plan
 
-This plan breaks down the PixiJS card graphics integration into 5 independent, testable stages. Each stage delivers a working feature and can be validated before moving to the next.
+## Project Overview
+
+Implement full GLSL shader-based holographic foil effect for all 16 cards in The Mule's Court, inspired by Magic: The Gathering's subtle foil aesthetic and Marvel Snap's autonomous animation, themed with Foundation universe colors (gold, silver, chrome, imperial tones).
+
+**Timeline**: October 6-31, 2025 (~25 days)
+**Technology**: BabylonJS ShaderMaterial with custom GLSL shaders
+**Visual Reference**: MTG foil cards (elegant, subtle) + Marvel Snap (autonomous shimmer)
+**Color Palette**: Metallic gold, silver, chrome, gunmetal, with character-specific accent colors
 
 ---
 
-## Stage 1: Foundation - PixiJS Card Rendering Core
+## Current State Assessment
 
-**Goal**: Create the core PixiJS card rendering infrastructure with programmatic graphics (no external assets).
+### Assets Available
+- 11 unique character portraits (4 variants each: `_0`, `_1`, `_2`, `_3`)
+- Card frame template: `card_front_3.png` (black/gold art deco border)
+- Card backs: `card_back_3.png`
+- Color gradients defined in `cards.ts` (Tailwind format)
 
-**Success Criteria**:
-- [ ] `PixiCardRenderer` component renders a PixiJS canvas
-- [ ] Single card renders with Graphics API (gradient background, text, borders)
-- [ ] Card displays correct data (name, value, icon, ability)
-- [ ] Three size variants work (small, medium, large)
-- [ ] Card back rendering works (hidden state)
-- [ ] Component tests pass
-- [ ] No memory leaks (verified with Chrome DevTools)
+### Existing Architecture
+- **BabylonCard.ts** (lines 1-284): 2D GUI-based card rendering
+- **BabylonCardRenderer.tsx** (lines 1-294): React wrapper for GUI cards
+- **BabylonCanvas.tsx** (lines 1-78): Engine/Scene lifecycle management
+- **Game state**: Managed by React `useGameState` hook
 
-**Tests**:
-```typescript
-// PixiCardRenderer.test.tsx
-- renders PixiJS canvas element
-- displays card with correct name and value
-- shows card back when isRevealed=false
-- scales card to correct size (small/medium/large)
-- destroys PixiJS app on unmount (no memory leak)
-```
+### Architecture Change Required
+- **From**: 2D GUI rectangles (`GUI.Rectangle`, `GUI.Image`, `GUI.TextBlock`)
+- **To**: 3D plane meshes with `ShaderMaterial`
+- **Reason**: Shaders only work on 3D meshes, not GUI controls
 
-**Technical Tasks**:
+---
 
-1. **Create PixiJS type definitions**
-   - File: `src/types/pixi.ts`
-   - Define `PixiCardRendererProps` interface
-   - Define `CardSpriteData` interface
+## Stage 1: Texture Asset Generation
 
-2. **Create CardSprite factory**
-   - File: `src/pixi/card/CardSprite.ts`
-   - Function: `createCardSprite(card: Card, size: Size): Container`
-   - Use Graphics API to draw:
-     - Rectangle with gradient fill (match current Tailwind gradients)
-     - Border with rounded corners
-     - Corner decorative elements
-   - Use Text API to render:
-     - Card name (top)
-     - Card value (top-right)
-     - Ability text (bottom, in box)
-     - Icon (emoji via Text)
-   - Function: `createCardBackSprite(size: Size): Container`
-   - Return Container with all graphics/text as children
-
-3. **Create CardRenderer logic**
-   - File: `src/pixi/card/CardRenderer.ts`
-   - Function: `createCardRenderer(app: Application, cards: Card[], options: RenderOptions): void`
-   - Manage Container hierarchy (one Container per card)
-   - Position cards in a row (with spacing)
-   - Handle size scaling
-
-4. **Create React component wrapper**
-   - File: `src/components/PixiCardRenderer.tsx`
-   - Props: `cards`, `size`, `isRevealed`, `isInteractive`, `onCardClick`
-   - Initialize PixiJS Application in `useEffect`
-   - Call `createCardRenderer()` to render cards
-   - Clean up on unmount (`app.destroy()`)
-
-5. **Create tests**
-   - File: `src/components/PixiCardRenderer.test.tsx`
-   - Test rendering, sizing, revealed/hidden states
-
-6. **Create demo page** (temporary, for visual testing)
-   - File: `src/components/PixiCardDemo.tsx`
-   - Display all 16 cards in a grid
-   - Toggle between sizes and revealed/hidden states
-   - Visual verification tool
-
-**Files Created**:
-- `src/types/pixi.ts`
-- `src/pixi/card/CardSprite.ts`
-- `src/pixi/card/CardRenderer.ts`
-- `src/components/PixiCardRenderer.tsx`
-- `src/components/PixiCardRenderer.test.tsx`
-- `src/components/PixiCardDemo.tsx` (temporary)
-
+**Goal**: Create all shader textures using ComfyUI
+**Duration**: 2-3 days (Oct 6-9)
 **Status**: Not Started
 
+### Tasks
+1. Generate rainbow gradient texture (horizontal spectrum, 1024x256px)
+   - Smooth transition: Red → Orange → Yellow → Green → Cyan → Blue → Purple → Red
+   - MTG-style: Subtle, not oversaturated
+   - Format: PNG, sRGB color space
+
+2. Generate distortion/flow map texture (1024x1024px)
+   - Perlin/Simplex noise pattern for UV distortion
+   - Grayscale (R=U offset, G=V offset, B=unused)
+   - Subtle variation (not extreme warping)
+
+3. Generate sparkle/star pattern texture (512x512px)
+   - Random small white dots/stars on transparent background
+   - MTG-style: Sparse, elegant (not Pokemon-level sparkly)
+   - Alpha channel for blending
+
+4. Optional: Normal map for depth (512x512px)
+   - Subtle bumps/ridges for card texture
+   - Low intensity (barely noticeable)
+
+### Success Criteria
+- [ ] All textures load in BabylonJS without errors
+- [ ] Rainbow gradient is smooth and MTG-appropriate
+- [ ] Distortion map creates subtle flow (not chaotic)
+- [ ] Sparkle pattern enhances without overwhelming
+
+### Tests
+- Visual inspection in BabylonJS Playground
+- Test at different zoom levels
+- Verify file sizes (<500KB total)
+
 ---
 
-## Stage 2: Interaction - Click & Hover Events
+## Stage 2: 3D Mesh Architecture
 
-**Goal**: Add interactive hover and click events to PixiJS cards, bridging to React callbacks.
+**Goal**: Replace 2D GUI with 3D plane meshes, maintain layout/positioning
+**Duration**: 3-4 days (Oct 9-13)
+**Status**: ✅ COMPLETED (Oct 6)
 
-**Success Criteria**:
-- [ ] Cards show hover effect (scale 1.05) when pointer enters
-- [ ] Cards reset scale when pointer leaves
-- [ ] Clicking a card calls `onCardClick` React callback
-- [ ] Only interactive cards respond to events (controlled by `isInteractive` prop)
-- [ ] Cursor changes to pointer on hover
-- [ ] Touch events work on mobile (tested in responsive mode)
-- [ ] Integration tests with `PlayerArea` component pass
+### Tasks
+1. ✅ Create `BabylonCardMesh.ts` class
+   - `MeshBuilder.CreatePlane()` for card geometry
+   - Aspect ratio: 2:3 (standard card proportions)
+   - Three sizes: small (1x1.5), medium (2x3), large (2.67x4)
+   - ActionManager for hover/click interactions
 
-**Tests**:
-```typescript
-// PixiCardRenderer.test.tsx (expanded)
-- card scales up on hover
-- card scales down on pointer leave
-- clicking card calls onCardClick with correct card ID
-- non-interactive cards do not respond to clicks
-- cursor changes to pointer when hovering interactive cards
-```
+2. ✅ Implement orthographic camera setup
+   - ArcRotateCamera in orthographic mode
+   - Camera locked (no user interaction)
+   - Proper frustum sizing based on canvas dimensions
 
-**Technical Tasks**:
+3. ✅ Create `BabylonCardRenderer3D.tsx` component
+   - 3D scene with transparent background
+   - Hemisphere lighting
+   - Canvas resize handling
 
-1. **Add event handling to CardSprite**
-   - File: `src/pixi/card/CardSprite.ts` (modify)
-   - Function: `makeCardInteractive(container: Container, cardId: string, onClick: (id: string) => void): void`
-   - Set `container.eventMode = 'static'` (PixiJS v8 API)
-   - Set `container.cursor = 'pointer'`
-   - Add listeners:
-     - `pointerover`: Scale to 1.05, add glow filter (optional)
-     - `pointerout`: Scale to 1.0, remove glow
-     - `pointerdown`: Call `onClick(cardId)`
+4. ✅ Create positioning system
+   - World-space position calculation for layouts
+   - Support horizontal/vertical/stack layouts
+   - Approximate world units from pixel spacing
 
-2. **Update CardRenderer to handle interactions**
-   - File: `src/pixi/card/CardRenderer.ts` (modify)
-   - Accept `isInteractive` and `onCardClick` in options
-   - Conditionally call `makeCardInteractive()` for each card
+5. ✅ Maintain React integration
+   - `useEffect` pattern for scene lifecycle
+   - Proper cleanup on unmount
+   - Raycasting-based click events via ActionManager
 
-3. **Update PixiCardRenderer component**
-   - File: `src/components/PixiCardRenderer.tsx` (modify)
-   - Pass `isInteractive` and `onCardClick` to CardRenderer
-   - Memoize onClick callback with `useCallback`
+6. ✅ Create test demo component
+   - `BabylonCard3DDemo` with interactive controls
+   - Accessible via `?demo=3d` URL parameter
+   - Test all sizes, layouts, revealed/hidden states
 
-4. **Integration test with PlayerArea**
-   - File: `src/components/PlayerArea.test.tsx` (create)
-   - Render PlayerArea with PixiCardRenderer
-   - Simulate click, verify callback fires
-   - Verify only current player's cards are interactive
+### Success Criteria
+- [x] All 16 cards render as 3D planes
+- [x] Layouts work (horizontal, vertical, stack)
+- [x] Click events work via raycasting
+- [x] Hover effects work (scale + brightness)
+- [x] Build compiles without TypeScript errors (new files)
+- [x] Dev server runs successfully
+- [x] Demo accessible at localhost:5173/?demo=3d
 
-5. **Update demo page**
-   - File: `src/components/PixiCardDemo.tsx` (modify)
-   - Add click counter to demonstrate interaction
-   - Add toggle for interactive mode
+### Tests
+- ✅ Build test: TypeScript compilation successful
+- ✅ Runtime test: Dev server starts
+- ⏭️ Visual test: Manual testing required (view demo in browser)
+- ⏭️ Performance test: FPS monitoring in browser DevTools
 
-**Files Modified**:
-- `src/pixi/card/CardSprite.ts`
-- `src/pixi/card/CardRenderer.ts`
-- `src/components/PixiCardRenderer.tsx`
-- `src/components/PixiCardRenderer.test.tsx`
-- `src/components/PixiCardDemo.tsx`
+### Notes
+- Temporary StandardMaterial with solid colors (will be replaced with ShaderMaterial in Stage 3)
+- Kept old BabylonCard.ts as backup
+- New implementation is drop-in compatible with existing BabylonCardRendererProps interface
 
-**Files Created**:
-- `src/components/PlayerArea.test.tsx`
+---
 
+## Stage 3: Basic Shader Implementation
+
+**Goal**: Create functional holofoil shader with time-based animation
+**Duration**: 5-7 days (Oct 13-20)
 **Status**: Not Started
 
+### Tasks
+1. Write vertex shader (`holofoil.vertex.glsl`)
+   ```glsl
+   precision highp float;
+
+   attribute vec3 position;
+   attribute vec3 normal;
+   attribute vec2 uv;
+
+   uniform mat4 worldViewProjection;
+   uniform mat4 world;
+   uniform vec3 cameraPosition;
+
+   varying vec2 vUV;
+   varying vec3 vNormal;
+   varying vec3 vViewDirection;
+
+   void main() {
+       vec4 worldPos = world * vec4(position, 1.0);
+       gl_Position = worldViewProjection * vec4(position, 1.0);
+
+       vUV = uv;
+       vNormal = normalize((world * vec4(normal, 0.0)).xyz);
+       vViewDirection = normalize(cameraPosition - worldPos.xyz);
+   }
+   ```
+
+2. Write fragment shader (`holofoil.fragment.glsl`)
+   ```glsl
+   precision highp float;
+
+   varying vec2 vUV;
+   varying vec3 vNormal;
+   varying vec3 vViewDirection;
+
+   uniform sampler2D cardTexture;      // Card front image
+   uniform sampler2D rainbowTexture;   // Gradient
+   uniform sampler2D distortionTexture; // Flow map
+   uniform sampler2D sparkleTexture;   // Stars
+
+   uniform float time;                 // Animated
+   uniform float holoIntensity;        // 0-1 strength
+   uniform float distortionStrength;   // UV warp amount
+   uniform vec3 accentColor;           // Character color
+
+   void main() {
+       // Base card texture
+       vec4 cardColor = texture2D(cardTexture, vUV);
+
+       // Animate distortion over time
+       vec2 flowUV = vUV + vec2(time * 0.02, time * 0.03);
+       vec2 distortion = texture2D(distortionTexture, flowUV).rg;
+       distortion = (distortion * 2.0 - 1.0) * distortionStrength;
+
+       // Calculate tangent-space view direction (for parallax)
+       vec2 holoUV = vUV + distortion;
+       holoUV.x += time * 0.05; // Slow horizontal scroll
+
+       // Sample rainbow with distorted UVs
+       vec4 rainbow = texture2D(rainbowTexture, holoUV);
+
+       // Sample sparkles
+       vec4 sparkles = texture2D(sparkleTexture, vUV + distortion);
+
+       // Mix based on view angle (Fresnel-like effect)
+       float fresnel = pow(1.0 - dot(vNormal, vViewDirection), 2.0);
+
+       // Combine layers
+       vec3 holo = rainbow.rgb * holoIntensity * fresnel;
+       holo += sparkles.rgb * sparkles.a * 0.3;
+       holo = mix(holo, holo * accentColor, 0.3); // Tint with character color
+
+       // Blend with card
+       vec3 finalColor = cardColor.rgb + holo * 0.5; // Additive blend
+
+       gl_FragColor = vec4(finalColor, cardColor.a);
+   }
+   ```
+
+3. Create `HolofoilMaterial.ts` wrapper class
+   - Instantiate `ShaderMaterial`
+   - Load shader files
+   - Set up uniforms/samplers
+   - Provide update method for animation
+
+4. Implement time-based animation
+   - Update `time` uniform each frame in render loop
+   - Slow, gentle movement (not frenetic)
+   - Loop seamlessly (use modulo or sine waves)
+
+### Success Criteria
+- [ ] Shader compiles without errors
+- [ ] Rainbow effect visible and animates smoothly
+- [ ] Distortion creates subtle flow (not chaos)
+- [ ] Sparkles enhance without overwhelming
+- [ ] Effect works on all 11 card types
+- [ ] Performance: 60fps with shader active
+
+### Tests
+- Shader compilation test (catch GLSL errors)
+- Visual test: Compare to MTG foil reference
+- Performance test: GPU usage monitoring
+- Animation test: Verify seamless looping
+
 ---
 
-## Stage 3: Integration - Replace GameCard with PixiCardRenderer
+## Stage 4: Advanced Shader Features & Polish
 
-**Goal**: Integrate PixiCardRenderer into the actual game components (PlayerArea, GameBoard).
-
-**Success Criteria**:
-- [ ] PlayerArea uses PixiCardRenderer for player hands
-- [ ] PlayerArea uses PixiCardRenderer for discard piles (as small icons or mini-cards)
-- [ ] GameBoard uses PixiCardRenderer for deck visualization
-- [ ] All existing game functionality works (draw, play, discard)
-- [ ] All existing tests pass (useGameState, fullGamePlaythrough)
-- [ ] Visual parity with old HTML/CSS cards (same layout, similar appearance)
-- [ ] GameCard.tsx deleted (or moved to legacy)
-
-**Tests**:
-```typescript
-// Integration tests (existing tests should pass)
-- useGameState.test.ts (UNCHANGED, should pass)
-- fullGamePlaythrough.test.ts (UNCHANGED, should pass)
-- PlayerArea.test.tsx (verify PixiCardRenderer renders)
-- GameBoard.test.tsx (verify deck renders)
-```
-
-**Technical Tasks**:
-
-1. **Modify PlayerArea to use PixiCardRenderer**
-   - File: `src/components/PlayerArea.tsx` (modify)
-   - Replace `GameCard` import with `PixiCardRenderer`
-   - Update hand rendering:
-     ```tsx
-     {/* OLD */}
-     {player.hand.map(card => (
-       <GameCard key={card.id} card={card} size="small" />
-     ))}
-
-     {/* NEW */}
-     <PixiCardRenderer
-       cards={player.hand}
-       size="small"
-       isRevealed={isLocalPlayer}
-       isInteractive={isCurrentPlayer && isLocalPlayer}
-       onCardClick={onCardClick}
-     />
-     ```
-   - Update discard pile rendering:
-     - Option A: Keep as emoji icons (current approach)
-     - Option B: Use PixiCardRenderer with very small size (recommended)
-
-2. **Modify GameBoard to use PixiCardRenderer for deck**
-   - File: `src/components/GameBoard.tsx` (modify)
-   - Replace deck placeholder div with:
-     ```tsx
-     <PixiCardRenderer
-       cards={[gameState.deck[0]]} {/* Just show top card */}
-       size="medium"
-       isRevealed={false} {/* Always show card back */}
-       isInteractive={false}
-     />
-     ```
-
-3. **Handle empty states**
-   - When `cards` array is empty (no cards in hand):
-     - PixiCardRenderer should render nothing (or placeholder text)
-   - When deck is empty:
-     - Show empty space or "Deck Empty" message
-
-4. **Update CardRenderer to handle layouts**
-   - File: `src/pixi/card/CardRenderer.ts` (modify)
-   - Add `layout` option: `horizontal`, `vertical`, `stack`
-   - Horizontal: Cards in a row (hand)
-   - Vertical: Cards in a column (rare)
-   - Stack: Cards overlapping (discard pile, deck)
-
-5. **Test game flow**
-   - Start game
-   - Draw card (verify PixiJS updates)
-   - Play card (verify PixiJS updates, card removed from hand)
-   - Discard pile updates (verify PixiJS shows played cards)
-   - End round, start new round (verify state resets)
-
-6. **Delete old GameCard.tsx**
-   - Move to `GameCard.legacy.tsx` (backup)
-   - Or delete entirely if confident
-
-7. **Update tests**
-   - Run all existing tests
-   - Fix any failing tests (likely due to component structure changes)
-   - Add new tests for PixiCardRenderer in PlayerArea/GameBoard
-
-**Files Modified**:
-- `src/components/PlayerArea.tsx`
-- `src/components/GameBoard.tsx`
-- `src/pixi/card/CardRenderer.ts`
-- `src/components/PixiCardRenderer.tsx`
-
-**Files Deleted**:
-- `src/components/GameCard.tsx` (or moved to `.legacy.tsx`)
-
-**Files Created**:
-- `src/components/GameBoard.test.tsx` (if doesn't exist)
-
+**Goal**: Add masking, per-card customization, quality settings
+**Duration**: 3-4 days (Oct 20-24)
 **Status**: Not Started
 
+### Tasks
+1. Implement masking system
+   - Create alpha masks for portrait vs border regions
+   - Apply different holo intensity to different areas
+   - Option: Stronger effect on borders, subtle on portraits
+
+2. Per-character color tinting
+   - Extract accent colors from `cards.ts` (Tailwind gradients)
+   - Convert to RGB uniforms
+   - Tint holo effect with character's theme color
+   - Example: Bayta (rose), Mule (red-black), First Speaker (emerald)
+
+3. Add quality settings
+   - High: Full shader with all effects
+   - Medium: Reduced sparkles, simpler distortion
+   - Low: Fallback to static gradient overlay (no shader)
+   - Auto-detect GPU capability
+
+4. Implement card back shader
+   - Separate shader for card backs (different texture)
+   - Simpler effect (less detailed)
+   - Consistent animation timing
+
+5. Add subtle depth/lighting
+   - Optional normal mapping
+   - Fake specular highlights
+   - Directional light response
+
+### Success Criteria
+- [ ] Masking works (border shimmers more than portrait)
+- [ ] Each character has unique color tint
+- [ ] Quality settings selectable via UI
+- [ ] Card backs have appropriate effect
+- [ ] Lighting enhances without overpowering
+
+### Tests
+- Visual test: Mask boundaries are clean
+- Color test: All 11 characters have correct tints
+- Performance test: Low-end device testing
+- A/B test: Quality settings comparison
+
 ---
 
-## Stage 4: Animation - Card Movement & Transitions
+## Stage 5: Integration, Optimization & Documentation
 
-**Goal**: Add smooth animations for card actions (deal, play, discard, flip).
-
-**Success Criteria**:
-- [ ] Cards animate when dealt at round start (slide from deck + fade in)
-- [ ] Cards animate when played (slide to center + scale up + fade out)
-- [ ] Cards animate when discarded (slide to discard pile + scale down)
-- [ ] Card flip animation when revealing hidden cards
-- [ ] Hover animation smooth (not instant snap)
-- [ ] Animations don't block game logic (can click during animation)
-- [ ] Frame rate stays at 60fps (verified with DevTools)
-
-**Tests**:
-```typescript
-// CardAnimations.test.ts
-- animateDeal completes in correct duration
-- animatePlay moves card to target position
-- animateFlip swaps texture at midpoint
-- animations can be interrupted/cancelled
-```
-
-**Technical Tasks**:
-
-1. **Create animation utilities**
-   - File: `src/pixi/card/CardAnimations.ts`
-   - Function: `animateDeal(sprite: Container, from: Point, to: Point, duration: number): Promise<void>`
-   - Function: `animatePlay(sprite: Container, to: Point, duration: number): Promise<void>`
-   - Function: `animateDiscard(sprite: Container, to: Point, duration: number): Promise<void>`
-   - Function: `animateFlip(sprite: Container, onMidpoint: () => void, duration: number): Promise<void>`
-   - Use PixiJS Ticker for frame-by-frame updates
-   - Implement easing functions (easeOut, easeInOut)
-
-2. **Add animation triggers to CardRenderer**
-   - File: `src/pixi/card/CardRenderer.ts` (modify)
-   - Detect when cards are added (deal animation)
-   - Detect when cards are removed (play/discard animation)
-   - Store previous card positions for diff
-
-3. **Update PixiCardRenderer to trigger animations**
-   - File: `src/components/PixiCardRenderer.tsx` (modify)
-   - Add `useEffect` to watch `cards` array changes
-   - Diff cards to detect additions/removals
-   - Call appropriate animation functions
-
-4. **Integrate with game actions**
-   - When `drawCard()` is called:
-     - New card animates from deck position to hand
-   - When `playCard()` is called:
-     - Card animates from hand to center (play area)
-     - Particle effect triggers (existing PixiEffects)
-     - Card then animates to discard pile
-   - When round starts:
-     - All initial cards animate from deck to hands
-
-5. **Add animation preferences**
-   - File: `src/contexts/GameSettingsContext.tsx` (create if doesn't exist)
-   - Setting: `enableAnimations` (boolean, default true)
-   - Setting: `animationSpeed` (0.5x, 1x, 2x)
-   - Allow users to disable animations for faster play
-
-6. **Polish hover animation**
-   - Replace instant scale with smooth tween (100ms)
-   - Add subtle glow effect on hover (optional)
-
-7. **Test animations**
-   - Visual testing in demo page
-   - Performance profiling (ensure 60fps)
-   - Test on mobile devices (touch events)
-
-**Files Created**:
-- `src/pixi/card/CardAnimations.ts`
-- `src/pixi/card/CardAnimations.test.ts`
-- `src/contexts/GameSettingsContext.tsx` (optional)
-
-**Files Modified**:
-- `src/pixi/card/CardRenderer.ts`
-- `src/components/PixiCardRenderer.tsx`
-
+**Goal**: Full deck integration, performance tuning, final polish
+**Duration**: 3-4 days (Oct 24-28)
 **Status**: Not Started
 
----
+### Tasks
+1. Apply shader to all 16 card instances
+   - Generate mesh + material for each card
+   - Handle card state (face-up, face-down, flipped)
+   - Ensure portrait variants load correctly
 
-## Stage 5: Asset Pipeline - Real Card Artwork (Optional)
+2. Optimize performance
+   - Profile GPU usage (Chrome DevTools, Spector.js)
+   - Freeze offscreen cards (culling)
+   - Reduce texture sizes if needed
+   - Minimize uniform updates
 
-**Goal**: Replace programmatic graphics with professional card artwork (textures).
+3. Polish animations
+   - Tune timing parameters (speed, intensity)
+   - Add subtle variations (different phase offsets per card)
+   - Ensure effect feels "alive" but not distracting
 
-**Success Criteria**:
-- [ ] 16 unique card images sourced/created
-- [ ] Card back image sourced/created
-- [ ] Texture atlas generated (spritesheet.json + spritesheet.webp)
-- [ ] Assets load via PixiJS Assets API
-- [ ] Texture-based sprites render correctly
-- [ ] Fallback to Graphics API if textures fail to load
-- [ ] Loading screen shows while assets load
-- [ ] Asset size is reasonable (<2MB total)
+4. Test on multiple devices
+   - Desktop: Chrome, Firefox, Safari
+   - Mobile: iOS Safari, Android Chrome
+   - Low-end: Reduce quality automatically
 
-**Tests**:
-```typescript
-// CardTextures.test.ts
-- loadCardTextures resolves successfully
-- getCardTexture returns valid texture for each card type
-- handles missing texture gracefully (fallback)
-- textures are cached (second call is instant)
-```
+5. Update React components
+   - Modify `GameBoard.tsx` to use new mesh system
+   - Update `PlayerArea.tsx` for 3D cards
+   - Ensure interaction handlers still work
 
-**Technical Tasks**:
+6. Write documentation
+   - Update CLAUDE.md with shader architecture
+   - Document shader uniforms and parameters
+   - Add comments to GLSL code
+   - Create tuning guide for future adjustments
 
-1. **Source card artwork**
-   - Option A: Commission artist (highest quality)
-   - Option B: AI-generated via DALL-E/Midjourney
-   - Option C: Use placeholder images from free sources
-   - Specifications: 512x768px, PNG or WebP, Foundation universe theme
+### Success Criteria
+- [ ] All 16 cards have holo effect
+- [ ] 60fps maintained on target devices
+- [ ] Effect enhances without distracting from gameplay
+- [ ] Code is well-documented
+- [ ] No visual bugs or glitches
 
-2. **Create texture atlas**
-   - Tool: TexturePacker (free tier) or `@pixi/spritesheet`
-   - Input: 17 images (16 cards + 1 back)
-   - Output: `spritesheet.json` + `spritesheet.webp`
-   - Settings:
-     - Max size: 2048x2048px
-     - Padding: 2px
-     - Format: JSON (pixi.js compatible)
-     - Extrude: 1px (prevent bleeding)
-
-3. **Create asset loading utilities**
-   - File: `src/pixi/card/CardTextures.ts`
-   - Function: `loadCardTextures(): Promise<void>`
-     - Calls `Assets.load('/assets/cards/spritesheet.json')`
-     - Caches textures in memory
-   - Function: `getCardTexture(type: CardType): Texture`
-     - Returns texture for card type
-     - Throws error if not loaded
-
-4. **Update CardSprite to use textures**
-   - File: `src/pixi/card/CardSprite.ts` (modify)
-   - Function: `createCardSpriteFromTexture(card: Card, size: Size): Sprite`
-     - Create Sprite from texture
-     - Scale to correct size
-     - Add overlay for text (name, value, ability)
-   - Keep old Graphics-based function as fallback
-
-5. **Add loading screen**
-   - File: `src/components/AssetLoader.tsx` (create)
-   - Show loading spinner while `loadCardTextures()` runs
-   - Display progress if possible (PixiJS Assets API supports progress)
-   - Error handling: Show error message if load fails
-
-6. **Update App to load assets**
-   - File: `src/App.tsx` (modify)
-   - Call `loadCardTextures()` before rendering game
-   - Show `<AssetLoader />` while loading
-
-7. **Optimize assets**
-   - Compress images with TinyPNG or ImageOptim
-   - Generate WebP + PNG fallback
-   - Target <2MB total size
-
-8. **Test asset loading**
-   - Test on slow network (throttle in DevTools)
-   - Test with missing assets (404 error)
-   - Test cache behavior (reload page)
-
-**Files Created**:
-- `public/assets/cards/spritesheet.json`
-- `public/assets/cards/spritesheet.webp`
-- `public/assets/cards/textures/*.webp` (17 images)
-- `src/pixi/card/CardTextures.ts`
-- `src/pixi/card/CardTextures.test.ts`
-- `src/components/AssetLoader.tsx`
-
-**Files Modified**:
-- `src/pixi/card/CardSprite.ts`
-- `src/App.tsx`
-
-**Status**: Not Started
+### Tests
+- Full integration test: Play complete game
+- Cross-browser testing
+- Mobile device testing
+- Performance benchmark: FPS over 5-minute session
+- User testing: Visual appeal survey
 
 ---
 
-## Stage Completion Checklist
+## Definition of Done
 
-After completing each stage:
-
-- [ ] All tests pass (`npm test`)
-- [ ] No TypeScript errors (`npm run build`)
-- [ ] No ESLint warnings (`npm run lint`)
-- [ ] Visual testing done in browser
-- [ ] Performance profiling shows no regressions (60fps maintained)
-- [ ] Memory profiling shows no leaks (Chrome DevTools)
-- [ ] Works on mobile (tested in responsive mode or actual device)
-- [ ] Code reviewed (self-review or peer review)
-- [ ] Documentation updated (if needed)
+- [ ] All 16 cards render with holographic shader
+- [ ] Effect matches MTG aesthetic + Foundation colors
+- [ ] Animation is autonomous (time-based, not mouse)
+- [ ] Performance: 60fps on target devices
+- [ ] All tests passing (unit, integration, visual)
+- [ ] Code documented and reviewed
+- [ ] No linter/formatter warnings
+- [ ] Changes recorded via GitButler MCP tool
+- [ ] IMPLEMENTATION_PLAN.md removed (work complete)
 
 ---
 
-## Dependencies & Risks
+## Timeline Summary
 
-### Dependencies Between Stages
+| Stage | Duration | Dates | Focus |
+|-------|----------|-------|-------|
+| 1. Textures | 2-3 days | Oct 6-9 | ComfyUI asset generation |
+| 2. Architecture | 3-4 days | Oct 9-13 | 2D GUI → 3D meshes |
+| 3. Shader Core | 5-7 days | Oct 13-20 | GLSL implementation |
+| 4. Polish | 3-4 days | Oct 20-24 | Masking, colors, quality |
+| 5. Integration | 3-4 days | Oct 24-28 | Full deck, optimization |
+| **Buffer** | 2-3 days | Oct 28-31 | Bug fixes, final tweaks |
 
-```
-Stage 1 (Foundation)
-  ↓
-Stage 2 (Interaction)
-  ↓
-Stage 3 (Integration) ← Can start Stage 4 in parallel
-  ↓
-Stage 4 (Animation)
-  ↓
-Stage 5 (Assets) ← Optional, can defer indefinitely
-```
-
-**Critical Path**: Stages 1-3 must be done sequentially. Stage 4 can start after Stage 3 is complete. Stage 5 is optional.
-
-### Risks & Mitigation
-
-| Risk | Impact | Mitigation |
-|------|--------|-----------|
-| PixiJS learning curve slows Stage 1 | High | Allocate extra time, refer to PixiJS docs in `public/llms.txt` |
-| Existing tests break in Stage 3 | Medium | Keep `GameCard.tsx` as backup, incremental integration |
-| Animations cause performance issues | Medium | Profile early, use sprite pooling if needed |
-| Asset sourcing delays Stage 5 | Low | Stage 5 is optional, can ship without it |
-| React/PixiJS state sync bugs | High | Write thorough integration tests in Stage 3 |
-
----
-
-## Success Metrics
-
-### Performance Targets
-
-- **Frame Rate**: 60fps sustained during gameplay
-- **Initial Load**: <2s to first render (excluding asset loading)
-- **Asset Load**: <5s to load all textures (Stage 5)
-- **Memory Usage**: <100MB total (measured in Chrome DevTools)
-- **Bundle Size**: <50KB added for PixiJS integration code (PixiJS itself is ~400KB)
-
-### Quality Targets
-
-- **Test Coverage**: >80% for new PixiJS code
-- **Visual Parity**: Stage 3 should look identical to current HTML/CSS cards
-- **Accessibility**: Canvas elements have ARIA labels, keyboard navigation works
-- **Mobile Support**: Touch events work, scales correctly on small screens
-
----
-
-## Post-Implementation
-
-### Cleanup Tasks
-
-After all stages complete:
-
-1. **Remove demo page**
-   - Delete `src/components/PixiCardDemo.tsx`
-
-2. **Remove legacy code**
-   - Delete `src/components/GameCard.legacy.tsx` (if exists)
-
-3. **Update documentation**
-   - Update `CLAUDE.md` with PixiJS integration notes
-   - Add PixiJS architecture section to README
-
-4. **Performance audit**
-   - Run Lighthouse audit
-   - Profile with Chrome DevTools
-   - Optimize if needed
-
-### Future Enhancements
-
-After successful deployment:
-
-- [ ] 3D card flips (PixiJS Projection plugin)
-- [ ] Particle effects per card (shimmer on high-value cards)
-- [ ] Sound effects (card whoosh, play sounds)
-- [ ] Animated card backgrounds (per-character themes)
-- [ ] Card shine effect (light sweep on hover)
-- [ ] Accessibility improvements (screen reader descriptions)
-
----
-
-## Notes
-
-- **Incremental commits**: Commit after each stage passes tests
-- **Branch strategy**: Use feature branch `feature/pixi-card-graphics`
-- **Code review**: Request review after Stages 2 and 4
-- **User testing**: Get feedback after Stage 3 before proceeding to animations
-
-**Estimated Timeline**:
-- Stage 1: 4-6 hours
-- Stage 2: 2-3 hours
-- Stage 3: 3-4 hours
-- Stage 4: 4-6 hours
-- Stage 5: 6-8 hours (if pursued)
-
-**Total**: 13-19 hours (excluding optional Stage 5)
+**Total**: 18-25 days (fits within October)
