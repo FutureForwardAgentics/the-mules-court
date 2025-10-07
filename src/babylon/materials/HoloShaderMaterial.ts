@@ -9,13 +9,10 @@ import {
 /**
  * HoloShaderMaterial
  *
- * Custom shader material that creates a holographic/iridescent effect
- * with cursor-following rainbow shimmer.
+ * Custom shader material that adds a subtle shimmer effect over card portraits.
+ * Creates an elegant metallic sheen that follows the cursor position.
  */
 export class HoloShaderMaterial extends ShaderMaterial {
-  private rainbowTexture: Texture;
-  private distortionTexture: Texture;
-  private sparkleTexture: Texture;
   private time: number = 0;
 
   constructor(name: string, scene: Scene, baseTexture: Texture) {
@@ -48,9 +45,6 @@ export class HoloShaderMaterial extends ShaderMaterial {
 
         // Uniforms
         uniform sampler2D textureSampler;     // Base card texture
-        uniform sampler2D rainbowSampler;     // Rainbow gradient
-        uniform sampler2D distortionSampler;  // Distortion map
-        uniform sampler2D sparkleSampler;     // Sparkle pattern
         uniform vec2 mousePos;                // Mouse position (0-1)
         uniform float time;                   // Animation time
 
@@ -58,40 +52,37 @@ export class HoloShaderMaterial extends ShaderMaterial {
           // Sample base texture
           vec4 baseColor = texture2D(textureSampler, vUV);
 
-          // Calculate distance from mouse position for cursor-following effect
+          // Calculate distance from mouse position
           vec2 toMouse = vUV - mousePos;
           float distToMouse = length(toMouse);
-          float mouseFactor = smoothstep(0.8, 0.0, distToMouse); // Stronger near mouse
 
-          // Animated distortion for shimmer effect
-          vec2 distortionUV = vUV + vec2(time * 0.03, time * 0.02);
-          vec2 distortion = texture2D(distortionSampler, distortionUV).rg * 0.05;
+          // Create animated shimmer sweep
+          // Diagonal sweep pattern that animates
+          float angle = atan(toMouse.y, toMouse.x);
+          float sweepPos = sin(time * 2.0 + angle * 3.0);
 
-          // Sample rainbow with mouse-relative offset and distortion
-          vec2 rainbowUV = vUV + toMouse * 0.2 + distortion;
-          rainbowUV.x += time * 0.1; // Animated scroll
-          vec4 rainbowColor = texture2D(rainbowSampler, rainbowUV);
+          // Shimmer intensity based on distance from sweep line
+          float shimmer = smoothstep(0.9, 0.5, abs(sweepPos - distToMouse * 2.0));
 
-          // Sample sparkles with animated rotation
-          float angle = time * 0.5;
-          vec2 sparkleUV = vUV - vec2(0.5);
-          sparkleUV = vec2(
-            sparkleUV.x * cos(angle) - sparkleUV.y * sin(angle),
-            sparkleUV.x * sin(angle) + sparkleUV.y * cos(angle)
-          ) + vec2(0.5);
-          vec4 sparkleColor = texture2D(sparkleSampler, sparkleUV + distortion);
+          // Add mouse proximity boost
+          float mouseFactor = smoothstep(0.6, 0.0, distToMouse);
+          shimmer = mix(shimmer, shimmer * 2.0, mouseFactor * 0.5);
 
-          // Blend holographic effect based on mouse proximity
-          float holoStrength = mouseFactor * 0.4 + 0.1; // Always subtle, stronger near mouse
-          vec4 holoEffect = mix(baseColor, rainbowColor, holoStrength);
-          holoEffect += sparkleColor * mouseFactor * 0.3; // Sparkles only near mouse
+          // Subtle edge glow (Fresnel-like effect)
+          float edgeFactor = pow(1.0 - abs(vUV.x - 0.5) * 2.0, 4.0);
+          edgeFactor *= pow(1.0 - abs(vUV.y - 0.5) * 2.0, 4.0);
+          float edgeGlow = edgeFactor * 0.15;
 
-          // Add edge iridescence (view-angle dependent simulation)
-          float edgeFactor = pow(1.0 - abs(vUV.x - 0.5) * 2.0, 3.0);
-          edgeFactor *= pow(1.0 - abs(vUV.y - 0.5) * 2.0, 3.0);
-          holoEffect += rainbowColor * edgeFactor * 0.2;
+          // Combine effects: base + shimmer + edge glow
+          // Shimmer is pure white/silver at 25% opacity
+          vec3 shimmerColor = vec3(1.0, 1.0, 1.0);
+          vec3 glowColor = vec3(0.8, 0.9, 1.0); // Slight blue tint for edge
 
-          gl_FragColor = holoEffect;
+          vec3 finalColor = baseColor.rgb;
+          finalColor += shimmerColor * shimmer * 0.25; // Subtle shimmer overlay
+          finalColor += glowColor * edgeGlow; // Subtle edge glow
+
+          gl_FragColor = vec4(finalColor, baseColor.a);
         }
       `;
     }
@@ -101,25 +92,13 @@ export class HoloShaderMaterial extends ShaderMaterial {
       uniforms: [
         'worldViewProjection',
         'textureSampler',
-        'rainbowSampler',
-        'distortionSampler',
-        'sparkleSampler',
         'mousePos',
         'time'
       ]
     });
 
-    // Load textures
+    // Set base texture
     this.setTexture('textureSampler', baseTexture);
-
-    this.rainbowTexture = new Texture('/img/shaders/rainbow_gradient.png', scene);
-    this.setTexture('rainbowSampler', this.rainbowTexture);
-
-    this.distortionTexture = new Texture('/img/shaders/distortion_map.png', scene);
-    this.setTexture('distortionSampler', this.distortionTexture);
-
-    this.sparkleTexture = new Texture('/img/shaders/sparkle_pattern.png', scene);
-    this.setTexture('sparkleSampler', this.sparkleTexture);
 
     // Initialize uniforms
     this.setVector2('mousePos', new Vector2(0.5, 0.5));
@@ -133,7 +112,7 @@ export class HoloShaderMaterial extends ShaderMaterial {
   }
 
   /**
-   * Update mouse position for cursor-following effect
+   * Update mouse position for cursor-following shimmer effect
    * @param x Mouse X position (0-1, normalized)
    * @param y Mouse Y position (0-1, normalized)
    */
@@ -145,9 +124,6 @@ export class HoloShaderMaterial extends ShaderMaterial {
    * Dispose of all resources
    */
   public dispose(): void {
-    this.rainbowTexture.dispose();
-    this.distortionTexture.dispose();
-    this.sparkleTexture.dispose();
     super.dispose();
   }
 }

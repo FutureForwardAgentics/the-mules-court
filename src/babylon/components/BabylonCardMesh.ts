@@ -14,6 +14,7 @@ import {
 import type { Card } from '../../types/game';
 import type { CardSize } from '../../types/babylon';
 import { HoloShaderMaterial } from '../materials/HoloShaderMaterial';
+import { CardTextureComposer } from '../utils/CardTextureComposer';
 
 /**
  * Configuration for creating a card mesh
@@ -51,17 +52,26 @@ export class BabylonCardMesh {
   public material: Material;
   private scene: Scene;
   private config: CardMeshConfig;
+  private static composerInstance: CardTextureComposer | null = null;
 
   constructor(scene: Scene, config: CardMeshConfig) {
     this.scene = scene;
     this.config = config;
 
-    // Create the mesh and material
+    // Initialize composer if needed
+    if (!BabylonCardMesh.composerInstance) {
+      BabylonCardMesh.composerInstance = new CardTextureComposer(scene);
+    }
+
+    // Create the mesh with a placeholder material
     this.mesh = this.createCardMesh();
-    this.material = config.useHoloShader
-      ? this.createHoloMaterial()
-      : this.createCardMaterial();
+
+    // Start with a basic placeholder material
+    this.material = this.createPlaceholderMaterial();
     this.mesh.material = this.material;
+
+    // Asynchronously create the proper material
+    this.initializeMaterial();
 
     // Set initial position
     this.mesh.position = config.position;
@@ -116,59 +126,78 @@ export class BabylonCardMesh {
   }
 
   /**
-   * Create a graphical material for the card with textures
+   * Create placeholder material while card texture loads
    */
-  private createCardMaterial(): StandardMaterial {
+  private createPlaceholderMaterial(): StandardMaterial {
     const material = new StandardMaterial(
-      `card-material-${this.config.card.id}`,
+      `placeholder-material-${this.config.card.id}`,
       this.scene
     );
-
-    // Load appropriate texture based on revealed state
-    const texturePath = this.config.isRevealed
-      ? `/img/${this.config.card.value}_${this.config.card.type}.png` // Card front with portrait
-      : '/img/card_back_3.png'; // Card back
-
-    // Create and apply texture
-    const texture = new Texture(texturePath, this.scene);
-    material.diffuseTexture = texture;
-
-    // Graphical enhancements
-    material.specularColor = new Color3(0.3, 0.3, 0.3); // Slight shine
-    material.specularPower = 32; // Sharp highlights
-    material.backFaceCulling = false; // Render both sides
-
-    // Add subtle emissive for card glow
+    material.diffuseColor = new Color3(0.2, 0.2, 0.3);
     material.emissiveColor = new Color3(0.05, 0.05, 0.08);
-
-    // Enable alpha if texture has transparency
-    if (texture) {
-      material.useAlphaFromDiffuseTexture = true;
-    }
-
+    material.backFaceCulling = false;
     return material;
   }
 
   /**
-   * Create a holographic shader material for the card
+   * Initialize the proper material asynchronously
    */
-  private createHoloMaterial(): HoloShaderMaterial {
-    // Load appropriate texture based on revealed state
-    const texturePath = this.config.isRevealed
-      ? `/img/${this.config.card.value}_${this.config.card.type}.png`
-      : '/img/card_back_3.png';
+  private async initializeMaterial(): Promise<void> {
+    try {
+      if (this.config.isRevealed) {
+        // Create composed card texture with all elements
+        const composer = BabylonCardMesh.composerInstance!;
+        const cardTexture = await composer.createCardTexture(this.config.card);
 
-    const texture = new Texture(texturePath, this.scene);
+        // Create appropriate material with composed texture
+        if (this.config.useHoloShader) {
+          const holoMaterial = new HoloShaderMaterial(
+            `holo-material-${this.config.card.id}`,
+            this.scene,
+            cardTexture
+          );
+          holoMaterial.backFaceCulling = false;
 
-    const holoMaterial = new HoloShaderMaterial(
-      `holo-material-${this.config.card.id}`,
-      this.scene,
-      texture
-    );
+          // Dispose old material and apply new one
+          this.material.dispose();
+          this.material = holoMaterial;
+          this.mesh.material = holoMaterial;
+        } else {
+          const standardMaterial = new StandardMaterial(
+            `card-material-${this.config.card.id}`,
+            this.scene
+          );
+          standardMaterial.diffuseTexture = cardTexture;
+          standardMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
+          standardMaterial.specularPower = 32;
+          standardMaterial.backFaceCulling = false;
+          standardMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
 
-    holoMaterial.backFaceCulling = false;
+          // Dispose old material and apply new one
+          this.material.dispose();
+          this.material = standardMaterial;
+          this.mesh.material = standardMaterial;
+        }
+      } else {
+        // Card back - use static texture
+        const backTexture = new Texture('/img/card_back_3.png', this.scene);
+        const backMaterial = new StandardMaterial(
+          `back-material-${this.config.card.id}`,
+          this.scene
+        );
+        backMaterial.diffuseTexture = backTexture;
+        backMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
+        backMaterial.backFaceCulling = false;
+        backMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
 
-    return holoMaterial;
+        // Dispose old material and apply new one
+        this.material.dispose();
+        this.material = backMaterial;
+        this.mesh.material = backMaterial;
+      }
+    } catch (error) {
+      console.error(`Failed to initialize material for card ${this.config.card.id}:`, error);
+    }
   }
 
 
@@ -261,28 +290,11 @@ export class BabylonCardMesh {
   /**
    * Update the card's revealed state with texture swap
    */
-  public setRevealed(isRevealed: boolean): void {
+  public async setRevealed(isRevealed: boolean): Promise<void> {
     this.config.isRevealed = isRevealed;
 
-    if (this.material instanceof StandardMaterial) {
-      // Update texture to show front or back
-      const texturePath = isRevealed
-        ? `/img/${this.config.card.value}_${this.config.card.type}.png`
-        : '/img/card_back_3.png';
-
-      // Dispose old texture
-      if (this.material.diffuseTexture) {
-        this.material.diffuseTexture.dispose();
-      }
-
-      // Load new texture
-      this.material.diffuseTexture = new Texture(texturePath, this.scene);
-    } else if (this.material instanceof HoloShaderMaterial) {
-      // For HoloShaderMaterial, need to recreate material with new texture
-      this.material.dispose();
-      this.material = this.createHoloMaterial();
-      this.mesh.material = this.material;
-    }
+    // Re-initialize material with new revealed state
+    await this.initializeMaterial();
   }
 
   /**
