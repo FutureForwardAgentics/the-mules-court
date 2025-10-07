@@ -4,10 +4,12 @@ import {
   MeshBuilder,
   StandardMaterial,
   Vector3,
+  Vector4,
   Color3,
   ActionManager,
   ExecuteCodeAction,
   Texture,
+  DynamicTexture,
   ShadowGenerator,
   Material
 } from '@babylonjs/core';
@@ -98,16 +100,25 @@ export class BabylonCardMesh {
 
   /**
    * Create a plane mesh with card proportions
+   * Uses frontUVs and backUVs to map different textures to each side
    */
   private createCardMesh(): Mesh {
     const dimensions = CARD_DIMENSIONS[this.config.size];
+
+    // Define UV coordinates for front and back
+    // Front uses left half of texture atlas (0 to 0.5)
+    const frontUVs = new Vector4(0, 0, 0.5, 1);
+    // Back uses right half of texture atlas (0.5 to 1)
+    const backUVs = new Vector4(0.5, 0, 1, 1);
 
     const mesh = MeshBuilder.CreatePlane(
       `card-mesh-${this.config.card.id}`,
       {
         width: dimensions.width,
         height: dimensions.height,
-        sideOrientation: Mesh.DOUBLESIDE // Visible from both sides
+        sideOrientation: Mesh.DOUBLESIDE, // Visible from both sides
+        frontUVs: frontUVs, // UV mapping for front face
+        backUVs: backUVs    // UV mapping for back face
       },
       this.scene
     );
@@ -141,68 +152,79 @@ export class BabylonCardMesh {
 
   /**
    * Initialize the proper material asynchronously
+   * Creates a combined texture atlas with card front (left half) and back (right half)
    */
   private async initializeMaterial(): Promise<void> {
     try {
-      if (this.config.isRevealed) {
-        // Create composed card texture with all elements
-        const composer = BabylonCardMesh.composerInstance!;
-        const cardTexture = await composer.createCardTexture(this.config.card);
+      // Create composed card front texture
+      const composer = BabylonCardMesh.composerInstance!;
+      const cardFrontTexture = await composer.createCardTexture(this.config.card);
 
-        // Create appropriate material with composed texture
-        if (this.config.useHoloShader) {
-          const holoMaterial = new HoloShaderMaterial(
-            `holo-material-${this.config.card.id}`,
-            this.scene,
-            cardTexture
-          );
-          holoMaterial.backFaceCulling = false;
+      // Load card back texture
+      const backTextureImage = await this.loadImage('/img/card-back/card_back_3.png');
 
-          // Dispose old material and apply new one
-          this.material.dispose();
-          this.material = holoMaterial;
-          this.mesh.material = holoMaterial;
-        } else {
-          const standardMaterial = new StandardMaterial(
-            `card-material-${this.config.card.id}`,
-            this.scene
-          );
-          standardMaterial.diffuseTexture = cardTexture;
-          standardMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
-          standardMaterial.specularPower = 32;
-          standardMaterial.backFaceCulling = false;
-          standardMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
+      // Create combined atlas: front on left half, back on right half
+      const atlasWidth = 2048 * 2; // Double width for side-by-side
+      const atlasHeight = 3072;
 
-          // Dispose old material and apply new one
-          this.material.dispose();
-          this.material = standardMaterial;
-          this.mesh.material = standardMaterial;
-        }
-      } else {
-        // Card back - use static texture
-        const backTexture = new Texture('/img/card-back/card_back_3.png', this.scene);
+      const atlasTexture = new DynamicTexture(
+        `card-atlas-${this.config.card.id}`,
+        { width: atlasWidth, height: atlasHeight },
+        this.scene,
+        false
+      );
 
-        // Apply maximum quality filtering for sharp rendering at angles
-        backTexture.anisotropicFilteringLevel = 16;
-        backTexture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE);
+      const ctx = atlasTexture.getContext() as unknown as CanvasRenderingContext2D;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
 
-        const backMaterial = new StandardMaterial(
-          `back-material-${this.config.card.id}`,
-          this.scene
-        );
-        backMaterial.diffuseTexture = backTexture;
-        backMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
-        backMaterial.backFaceCulling = false;
-        backMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
+      // Draw card front on left half (0 to 2048)
+      const frontCanvas = cardFrontTexture.getContext() as unknown as CanvasRenderingContext2D;
+      ctx.drawImage(frontCanvas.canvas, 0, 0, 2048, 3072);
 
-        // Dispose old material and apply new one
-        this.material.dispose();
-        this.material = backMaterial;
-        this.mesh.material = backMaterial;
-      }
+      // Draw card back on right half (2048 to 4096)
+      ctx.drawImage(backTextureImage, 2048, 0, 2048, 3072);
+
+      atlasTexture.update();
+
+      // Apply quality filtering
+      atlasTexture.anisotropicFilteringLevel = 16;
+      atlasTexture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE);
+
+      // Create material with atlas texture
+      const standardMaterial = new StandardMaterial(
+        `card-material-${this.config.card.id}`,
+        this.scene
+      );
+      standardMaterial.diffuseTexture = atlasTexture;
+      standardMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
+      standardMaterial.specularPower = 32;
+      standardMaterial.backFaceCulling = false;
+      standardMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
+
+      // Dispose old material and apply new one
+      this.material.dispose();
+      this.material = standardMaterial;
+      this.mesh.material = standardMaterial;
+
+      // Clean up temporary textures
+      cardFrontTexture.dispose();
     } catch (error) {
       console.error(`Failed to initialize material for card ${this.config.card.id}:`, error);
     }
+  }
+
+  /**
+   * Load an image from URL
+   */
+  private loadImage(url: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error(`Failed to load image: ${url}`));
+      img.src = url;
+    });
   }
 
   /**
