@@ -1,4 +1,4 @@
-import { DynamicTexture, Scene } from '@babylonjs/core';
+import { DynamicTexture, Scene, Texture } from '@babylonjs/core';
 import type { Card } from '../../types/game';
 
 /**
@@ -87,6 +87,10 @@ export class CardTextureComposer {
 
     // Update texture
     texture.update();
+
+    // Apply maximum quality filtering for sharp text at all angles
+    texture.anisotropicFilteringLevel = 16; // Maximum anisotropic filtering
+    texture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE);
 
     return texture;
   }

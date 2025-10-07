@@ -48,8 +48,10 @@ const CARD_DIMENSIONS = {
  * Replaces the 2D GUI-based BabylonCard with a shader-ready mesh.
  */
 export class BabylonCardMesh {
-  public mesh: Mesh;
+  public mesh: Mesh; // Front face of card
   public material: Material;
+  private backMesh: Mesh; // Back face of card
+  private backMaterial: Material;
   private scene: Scene;
   private config: CardMeshConfig;
   private static composerInstance: CardTextureComposer | null = null;
@@ -63,34 +65,50 @@ export class BabylonCardMesh {
       BabylonCardMesh.composerInstance = new CardTextureComposer(scene);
     }
 
-    // Create the mesh with a placeholder material
-    this.mesh = this.createCardMesh();
+    // Create the front mesh with a placeholder material
+    this.mesh = this.createCardMesh('front');
 
     // Start with a basic placeholder material
     this.material = this.createPlaceholderMaterial();
     this.mesh.material = this.material;
 
-    // Asynchronously create the proper material
-    this.initializeMaterial();
+    // Create the back mesh for double-sided card
+    this.backMesh = this.createCardMesh('back');
+    this.backMaterial = this.createPlaceholderMaterial();
+    this.backMesh.material = this.backMaterial;
 
-    // Set initial position
+    // Asynchronously create the proper materials
+    this.initializeMaterial();
+    this.initializeBackMaterial();
+
+    // Set initial position for both meshes
     this.mesh.position = config.position;
+    this.backMesh.position = config.position;
 
     // Apply rotation for 2.5D effect if provided
     if (config.rotation) {
       this.mesh.rotation = config.rotation;
+      // Back mesh has same rotation plus 180° on Y axis
+      this.backMesh.rotation = new Vector3(
+        config.rotation.x,
+        config.rotation.y + Math.PI,
+        config.rotation.z
+      );
     } else {
       // Default slight tilt for depth
       this.mesh.rotation = new Vector3(0.1, 0, 0); // Tilt forward slightly
+      this.backMesh.rotation = new Vector3(0.1, Math.PI, 0); // Tilt forward, facing opposite
     }
 
     // Enable shadow casting if shadow generator provided
     if (config.shadowGenerator) {
       config.shadowGenerator.addShadowCaster(this.mesh);
+      config.shadowGenerator.addShadowCaster(this.backMesh);
       this.mesh.receiveShadows = true;
+      this.backMesh.receiveShadows = true;
     }
 
-    // Enable interactions if needed
+    // Enable interactions if needed (only on front mesh)
     if (config.isInteractive && config.onCardClick) {
       this.enableInteractions();
     }
@@ -98,28 +116,30 @@ export class BabylonCardMesh {
 
   /**
    * Create a plane mesh with card proportions
+   * @param face 'front' or 'back' face of the card
    */
-  private createCardMesh(): Mesh {
+  private createCardMesh(face: 'front' | 'back'): Mesh {
     const dimensions = CARD_DIMENSIONS[this.config.size];
 
     const mesh = MeshBuilder.CreatePlane(
-      `card-mesh-${this.config.card.id}`,
+      `card-${face}-${this.config.card.id}`,
       {
         width: dimensions.width,
         height: dimensions.height,
-        sideOrientation: Mesh.DOUBLESIDE // Visible from both sides
+        sideOrientation: Mesh.FRONTSIDE // Only visible from front (proper face culling)
       },
       this.scene
     );
 
-    // Enable picking for raycasting
-    mesh.isPickable = this.config.isInteractive;
+    // Enable picking for raycasting (only on front face)
+    mesh.isPickable = this.config.isInteractive && face === 'front';
 
     // Store card data for later reference
     mesh.metadata = {
       cardId: this.config.card.id,
       cardType: this.config.card.type,
-      isCard: true
+      isCard: true,
+      face
     };
 
     return mesh;
@@ -200,6 +220,35 @@ export class BabylonCardMesh {
     }
   }
 
+  /**
+   * Initialize the back material with card_back_3.png texture
+   */
+  private async initializeBackMaterial(): Promise<void> {
+    try {
+      // Load card back texture
+      const backTexture = new Texture('/img/card-back/card_back_3.png', this.scene);
+
+      // Apply maximum quality filtering for sharp rendering at angles
+      backTexture.anisotropicFilteringLevel = 16;
+      backTexture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE);
+
+      const backMaterial = new StandardMaterial(
+        `back-material-${this.config.card.id}`,
+        this.scene
+      );
+      backMaterial.diffuseTexture = backTexture;
+      backMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
+      backMaterial.backFaceCulling = true; // Proper face culling
+      backMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
+
+      // Dispose old material and apply new one
+      this.backMaterial.dispose();
+      this.backMaterial = backMaterial;
+      this.backMesh.material = backMaterial;
+    } catch (error) {
+      console.error(`Failed to initialize back material for card ${this.config.card.id}:`, error);
+    }
+  }
 
   /**
    * Enable hover and click interactions using ActionManager
@@ -316,8 +365,13 @@ export class BabylonCardMesh {
    * Dispose of the mesh and material
    */
   public dispose(): void {
+    // Dispose front mesh and material
     this.material.dispose();
     this.mesh.dispose();
+
+    // Dispose back mesh and material
+    this.backMaterial.dispose();
+    this.backMesh.dispose();
   }
 
   /**
