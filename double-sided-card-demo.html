@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double-Sided Card Demo</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+            max-width: 600px;
+        }
+
+        .demo-container {
+            perspective: 1000px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            width: 300px;
+            height: 450px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex-direction: column;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            transform: rotateY(180deg);
+        }
+
+        .value-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid gold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+
+        .card-name {
+            font-size: 28px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 20px;
+            border-radius: 5px;
+        }
+
+        .card-ability {
+            font-size: 16px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 5px;
+            line-height: 1.4;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #764ba2;
+        }
+
+        .explanation {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 800px;
+            line-height: 1.6;
+        }
+
+        .explanation h2 {
+            color: #667eea;
+            margin-top: 0;
+        }
+
+        .explanation code {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #f093fb;
+        }
+
+        .explanation pre {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Double-Sided Card Demo (HTML5/JavaScript)</h1>
+
+    <div class="instructions">
+        <strong>Instructions:</strong> Click the card to flip it and see both sides.
+        This demonstrates the correct approach for double-sided cards using CSS 3D transforms.
+    </div>
+
+    <div class="demo-container">
+        <div class="card" id="demoCard">
+            <!-- Front Face -->
+            <div class="card-face card-front">
+                <div class="value-circle">5</div>
+                <div class="card-name">Bayta Darell</div>
+                <div style="flex-grow: 1; display: flex; align-items: center;">
+                    <div style="width: 200px; height: 200px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                        [Portrait]
+                    </div>
+                </div>
+                <div class="card-ability">Choose an opponent to reveal their hand to a player of your choice.</div>
+            </div>
+
+            <!-- Back Face -->
+            <div class="card-face card-back">
+                <div style="font-size: 48px; margin-bottom: 20px;">🎴</div>
+                <div>CARD BACK</div>
+                <div style="font-size: 14px; margin-top: 20px; opacity: 0.7;">The Mule's Court</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button onclick="flipCard()">Flip Card</button>
+        <button onclick="resetCard()">Reset</button>
+    </div>
+
+    <div class="explanation">
+        <h2>How This Works</h2>
+
+        <p><strong>Key Concepts:</strong></p>
+        <ol>
+            <li><code>transform-style: preserve-3d</code> - Enables 3D transforms on the card container</li>
+            <li><code>backface-visibility: hidden</code> - Hides the back side of each face when rotated away</li>
+            <li><strong>Two separate elements</strong> - One for front, one for back</li>
+            <li><strong>Back face rotated 180°</strong> - So when card flips, back becomes visible</li>
+        </ol>
+
+        <p><strong>Structure:</strong></p>
+        <pre>
+&lt;div class="card"&gt;  &lt;!-- Container with preserve-3d --&gt;
+    &lt;div class="card-front"&gt;  &lt;!-- Front face --&gt;
+        [Card front content]
+    &lt;/div&gt;
+    &lt;div class="card-back"&gt;  &lt;!-- Back face rotated 180° --&gt;
+        [Card back content]
+    &lt;/div&gt;
+&lt;/div&gt;</pre>
+
+        <p><strong>BabylonJS Translation:</strong></p>
+        <ul>
+            <li><strong>Don't use DOUBLESIDE</strong> - Create TWO separate plane meshes</li>
+            <li><strong>Parent them together</strong> - So they move as one unit</li>
+            <li><strong>Rotate back mesh 180° on Y axis</strong> - In local space</li>
+            <li><strong>Use FRONTSIDE for both</strong> - With backFaceCulling enabled (not disabled!)</li>
+            <li><strong>Position slightly apart</strong> - Small Z offset to prevent z-fighting</li>
+        </ul>
+
+        <p><strong>The problem with your previous approaches:</strong></p>
+        <ul>
+            <li>DOUBLESIDE shows the same texture on both sides (like a piece of paper)</li>
+            <li>Setting backFaceCulling = false prevents proper face culling</li>
+            <li>UV mapping (frontUVs/backUVs) is for texture atlases, not separate images</li>
+            <li>Need actual geometry separation (two planes) not texture tricks</li>
+        </ul>
+    </div>
+
+    <script>
+        const card = document.getElementById('demoCard');
+        let isFlipped = false;
+
+        function flipCard() {
+            isFlipped = !isFlipped;
+            if (isFlipped) {
+                card.classList.add('flipped');
+            } else {
+                card.classList.remove('flipped');
+            }
+        }
+
+        function resetCard() {
+            isFlipped = false;
+            card.classList.remove('flipped');
+        }
+
+        // Click to flip
+        card.addEventListener('click', flipCard);
+    </script>
+</body>
+</html>
