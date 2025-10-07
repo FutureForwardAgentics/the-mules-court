@@ -124,7 +124,7 @@ export class BabylonCardMesh {
       {
         width: dimensions.width,
         height: dimensions.height,
-        sideOrientation: Mesh.FRONTSIDE // Only visible from front (proper face culling)
+        sideOrientation: Mesh.DOUBLESIDE // Visible from both sides
       },
       this.scene
     );
