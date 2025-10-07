@@ -48,10 +48,8 @@ const CARD_DIMENSIONS = {
  * Replaces the 2D GUI-based BabylonCard with a shader-ready mesh.
  */
 export class BabylonCardMesh {
-  public mesh: Mesh; // Front face of card
+  public mesh: Mesh;
   public material: Material;
-  private backMesh: Mesh; // Back face of card
-  private backMaterial: Material;
   private scene: Scene;
   private config: CardMeshConfig;
   private static composerInstance: CardTextureComposer | null = null;
@@ -65,48 +63,34 @@ export class BabylonCardMesh {
       BabylonCardMesh.composerInstance = new CardTextureComposer(scene);
     }
 
-    // Create the front mesh with a placeholder material
-    this.mesh = this.createCardMesh('front');
+    // Create the mesh with a placeholder material
+    this.mesh = this.createCardMesh();
 
     // Start with a basic placeholder material
     this.material = this.createPlaceholderMaterial();
     this.mesh.material = this.material;
 
-    // Create the back mesh for double-sided card
-    this.backMesh = this.createCardMesh('back');
-    this.backMaterial = this.createPlaceholderMaterial();
-    this.backMesh.material = this.backMaterial;
-
-    // Asynchronously create the proper materials
+    // Asynchronously create the proper material
     this.initializeMaterial();
-    this.initializeBackMaterial();
 
-    // Parent back mesh to front mesh so they transform together
-    this.backMesh.parent = this.mesh;
-
-    // Position back mesh slightly behind to prevent z-fighting (in local space)
-    this.backMesh.position = new Vector3(0, 0, -0.001);
-
-    // Rotate back mesh 180° on Y axis (in local space) to face opposite direction
-    this.backMesh.rotation = new Vector3(0, Math.PI, 0);
-
-    // Set initial position and rotation for front mesh (parent)
+    // Set initial position
     this.mesh.position = config.position;
+
+    // Apply rotation for 2.5D effect if provided
     if (config.rotation) {
       this.mesh.rotation = config.rotation;
     } else {
-      this.mesh.rotation = new Vector3(0.1, 0, 0); // Default slight tilt
+      // Default slight tilt for depth
+      this.mesh.rotation = new Vector3(0.1, 0, 0); // Tilt forward slightly
     }
 
     // Enable shadow casting if shadow generator provided
     if (config.shadowGenerator) {
       config.shadowGenerator.addShadowCaster(this.mesh);
-      config.shadowGenerator.addShadowCaster(this.backMesh);
       this.mesh.receiveShadows = true;
-      this.backMesh.receiveShadows = true;
     }
 
-    // Enable interactions if needed (only on front mesh)
+    // Enable interactions if needed
     if (config.isInteractive && config.onCardClick) {
       this.enableInteractions();
     }
@@ -114,13 +98,12 @@ export class BabylonCardMesh {
 
   /**
    * Create a plane mesh with card proportions
-   * @param face 'front' or 'back' face of the card
    */
-  private createCardMesh(face: 'front' | 'back'): Mesh {
+  private createCardMesh(): Mesh {
     const dimensions = CARD_DIMENSIONS[this.config.size];
 
     const mesh = MeshBuilder.CreatePlane(
-      `card-${face}-${this.config.card.id}`,
+      `card-mesh-${this.config.card.id}`,
       {
         width: dimensions.width,
         height: dimensions.height,
@@ -129,15 +112,14 @@ export class BabylonCardMesh {
       this.scene
     );
 
-    // Enable picking for raycasting (only on front face)
-    mesh.isPickable = this.config.isInteractive && face === 'front';
+    // Enable picking for raycasting
+    mesh.isPickable = this.config.isInteractive;
 
     // Store card data for later reference
     mesh.metadata = {
       cardId: this.config.card.id,
       cardType: this.config.card.type,
-      isCard: true,
-      face
+      isCard: true
     };
 
     return mesh;
@@ -202,6 +184,14 @@ export class BabylonCardMesh {
       } else {
         // Card back - use static texture
         const backTexture = new Texture('/img/card-back/card_back_3.png', this.scene);
+
+        // Flip texture horizontally to correct mirroring
+        backTexture.uScale = -1;
+
+        // Apply maximum quality filtering for sharp rendering at angles
+        backTexture.anisotropicFilteringLevel = 16;
+        backTexture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE);
+
         const backMaterial = new StandardMaterial(
           `back-material-${this.config.card.id}`,
           this.scene
@@ -218,39 +208,6 @@ export class BabylonCardMesh {
       }
     } catch (error) {
       console.error(`Failed to initialize material for card ${this.config.card.id}:`, error);
-    }
-  }
-
-  /**
-   * Initialize the back material with card_back_3.png texture
-   */
-  private async initializeBackMaterial(): Promise<void> {
-    try {
-      // Load card back texture
-      const backTexture = new Texture('/img/card-back/card_back_3.png', this.scene);
-
-      // Flip texture horizontally to correct mirroring
-      backTexture.uScale = -1;
-
-      // Apply maximum quality filtering for sharp rendering at angles
-      backTexture.anisotropicFilteringLevel = 16;
-      backTexture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE);
-
-      const backMaterial = new StandardMaterial(
-        `back-material-${this.config.card.id}`,
-        this.scene
-      );
-      backMaterial.diffuseTexture = backTexture;
-      backMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
-      backMaterial.backFaceCulling = false; // Must be false since mesh is rotated 180°
-      backMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
-
-      // Dispose old material and apply new one
-      this.backMaterial.dispose();
-      this.backMaterial = backMaterial;
-      this.backMesh.material = backMaterial;
-    } catch (error) {
-      console.error(`Failed to initialize back material for card ${this.config.card.id}:`, error);
     }
   }
 
@@ -369,13 +326,8 @@ export class BabylonCardMesh {
    * Dispose of the mesh and material
    */
   public dispose(): void {
-    // Dispose front mesh and material
     this.material.dispose();
     this.mesh.dispose();
-
-    // Dispose back mesh and material
-    this.backMaterial.dispose();
-    this.backMesh.dispose();
   }
 
   /**
