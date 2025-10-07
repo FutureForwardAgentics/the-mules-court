@@ -230,4 +230,73 @@ This project has specialized agents in `.claude/agents/` for different developme
 2. `frontend-developer` - Implement rendering layer
 3. `whimsy-injector` - Add animations/effects
 4. `test-writer-fixer` - Test rendering logic
-- This project uses `babylon.js` for the GUI. The documents can be found at https://doc.babylonjs.com and the API calls can be found at https://doc.babylonjs.com/typedoc/modules/BABYLON.
+
+## BabylonJS Critical Lessons Learned
+
+This project uses `babylon.js` for 3D rendering. The documents can be found at https://doc.babylonjs.com and the API calls can be found at https://doc.babylonjs.com/typedoc/modules/BABYLON.
+
+### Double-Sided Objects (CRITICAL)
+
+**DO NOT use `Mesh.DOUBLESIDE` for objects that need different textures on each side.**
+
+❌ **WRONG Approach** (what doesn't work):
+- Using `Mesh.DOUBLESIDE` sideOrientation → shows SAME texture on both sides (mirrored)
+- Setting `backFaceCulling = false` → prevents proper face culling, causes mirroring issues
+- Using `frontUVs`/`backUVs` for separate textures → only works for texture atlases, not separate images
+- Using `uScale = -1` to flip textures → causes textures to disappear or not render properly
+
+✅ **CORRECT Approach** (double-sided with different textures):
+1. Create **TWO separate plane meshes** (front and back)
+2. Both use `Mesh.FRONTSIDE` orientation (NOT DOUBLESIDE)
+3. Both use `backFaceCulling = true` (NOT false!) - like CSS `backface-visibility: hidden`
+4. Parent back mesh to front mesh for unified transforms
+5. Rotate back mesh 180° on Y axis in local space: `new Vector3(0, Math.PI, 0)`
+6. Position back mesh slightly offset on Z: `new Vector3(0, 0, -0.001)` to prevent z-fighting
+7. Each mesh has its own separate material/texture
+
+**Code Example:**
+```typescript
+// Create front mesh
+const frontMesh = MeshBuilder.CreatePlane("front", {
+  width: 2, height: 3,
+  sideOrientation: Mesh.FRONTSIDE  // FRONTSIDE, not DOUBLESIDE
+}, scene);
+
+const frontMaterial = new StandardMaterial("frontMat", scene);
+frontMaterial.diffuseTexture = frontTexture;
+frontMaterial.backFaceCulling = true;  // TRUE, not false!
+frontMesh.material = frontMaterial;
+
+// Create back mesh
+const backMesh = MeshBuilder.CreatePlane("back", {
+  width: 2, height: 3,
+  sideOrientation: Mesh.FRONTSIDE  // FRONTSIDE, not DOUBLESIDE
+}, scene);
+
+const backMaterial = new StandardMaterial("backMat", scene);
+backMaterial.diffuseTexture = backTexture;
+backMaterial.backFaceCulling = true;  // TRUE, not false!
+backMesh.material = backMaterial;
+
+// Parent and position
+backMesh.parent = frontMesh;
+backMesh.position = new Vector3(0, 0, -0.001);  // Slight offset
+backMesh.rotation = new Vector3(0, Math.PI, 0);  // 180° on Y
+```
+
+**This mirrors the HTML5 approach:**
+- HTML: Two divs with `backface-visibility: hidden`, back div rotated 180°
+- BabylonJS: Two meshes with `backFaceCulling = true`, back mesh rotated 180°
+
+### Texture Quality Settings
+
+For crisp text/graphics at oblique viewing angles:
+- Use `texture.anisotropicFilteringLevel = 16` (maximum quality)
+- Use `texture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE)`
+- Resolution: 2048×3072 is sufficient for cards (4K+ causes performance issues)
+- Focus on contrast (opaque backgrounds: 0.9-0.95 alpha) rather than just increasing resolution
+
+### Texture Flipping
+
+- `texture.uScale = -1` can cause textures to disappear or render incorrectly
+- If mirroring is needed, consider rotating the mesh instead or fixing the source image
