@@ -236,7 +236,7 @@ export class BabylonCardMesh {
       );
       backMaterial.diffuseTexture = backTexture;
       backMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
-      backMaterial.backFaceCulling = true; // Proper face culling
+      backMaterial.backFaceCulling = false; // Must be false since mesh is rotated 180°
       backMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
 
       // Dispose old material and apply new one
