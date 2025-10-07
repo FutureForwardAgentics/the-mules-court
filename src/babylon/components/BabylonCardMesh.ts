@@ -149,9 +149,6 @@ export class BabylonCardMesh {
         const composer = BabylonCardMesh.composerInstance!;
         const cardTexture = await composer.createCardTexture(this.config.card);
 
-        // Flip texture horizontally to correct mirroring
-        cardTexture.uScale = -1;
-
         // Create appropriate material with composed texture
         if (this.config.useHoloShader) {
           const holoMaterial = new HoloShaderMaterial(
@@ -184,9 +181,6 @@ export class BabylonCardMesh {
       } else {
         // Card back - use static texture
         const backTexture = new Texture('/img/card-back/card_back_3.png', this.scene);
-
-        // Flip texture horizontally to correct mirroring
-        backTexture.uScale = -1;
 
         // Apply maximum quality filtering for sharp rendering at angles
         backTexture.anisotropicFilteringLevel = 16;
