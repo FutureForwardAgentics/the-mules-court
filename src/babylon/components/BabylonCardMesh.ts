@@ -8,10 +8,12 @@ import {
   ActionManager,
   ExecuteCodeAction,
   Texture,
-  ShadowGenerator
+  ShadowGenerator,
+  Material
 } from '@babylonjs/core';
 import type { Card } from '../../types/game';
 import type { CardSize } from '../../types/babylon';
+import { HoloShaderMaterial } from '../materials/HoloShaderMaterial';
 
 /**
  * Configuration for creating a card mesh
@@ -25,6 +27,7 @@ export interface CardMeshConfig {
   onCardClick?: (cardId: string) => void;
   rotation?: Vector3; // Optional initial rotation for 2.5D effect
   shadowGenerator?: ShadowGenerator; // Optional shadow casting
+  useHoloShader?: boolean; // Use holographic shader material
 }
 
 /**
@@ -45,7 +48,7 @@ const CARD_DIMENSIONS = {
  */
 export class BabylonCardMesh {
   public mesh: Mesh;
-  public material: StandardMaterial;
+  public material: Material;
   private scene: Scene;
   private config: CardMeshConfig;
 
@@ -55,7 +58,9 @@ export class BabylonCardMesh {
 
     // Create the mesh and material
     this.mesh = this.createCardMesh();
-    this.material = this.createCardMaterial();
+    this.material = config.useHoloShader
+      ? this.createHoloMaterial()
+      : this.createCardMaterial();
     this.mesh.material = this.material;
 
     // Set initial position
@@ -144,6 +149,28 @@ export class BabylonCardMesh {
     return material;
   }
 
+  /**
+   * Create a holographic shader material for the card
+   */
+  private createHoloMaterial(): HoloShaderMaterial {
+    // Load appropriate texture based on revealed state
+    const texturePath = this.config.isRevealed
+      ? `/img/${this.config.card.value}_${this.config.card.type}.png`
+      : '/img/card_back_3.png';
+
+    const texture = new Texture(texturePath, this.scene);
+
+    const holoMaterial = new HoloShaderMaterial(
+      `holo-material-${this.config.card.id}`,
+      this.scene,
+      texture
+    );
+
+    holoMaterial.backFaceCulling = false;
+
+    return holoMaterial;
+  }
+
 
   /**
    * Enable hover and click interactions using ActionManager
@@ -194,8 +221,11 @@ export class BabylonCardMesh {
       currentRotation.z
     );
 
-    // Brighten material with glow
-    this.material.emissiveColor = new Color3(0.1, 0.1, 0.15);
+    // Brighten material with glow (only for StandardMaterial)
+    if (this.material instanceof StandardMaterial) {
+      this.material.emissiveColor = new Color3(0.1, 0.1, 0.15);
+    }
+    // HoloShaderMaterial has built-in hover effect via mouse position
   }
 
   /**
@@ -213,8 +243,10 @@ export class BabylonCardMesh {
       this.mesh.rotation = new Vector3(0.1, 0, 0);
     }
 
-    // Reset brightness
-    this.material.emissiveColor = new Color3(0.05, 0.05, 0.08);
+    // Reset brightness (only for StandardMaterial)
+    if (this.material instanceof StandardMaterial) {
+      this.material.emissiveColor = new Color3(0.05, 0.05, 0.08);
+    }
   }
 
   /**
@@ -232,18 +264,25 @@ export class BabylonCardMesh {
   public setRevealed(isRevealed: boolean): void {
     this.config.isRevealed = isRevealed;
 
-    // Update texture to show front or back
-    const texturePath = isRevealed
-      ? `/img/${this.config.card.value}_${this.config.card.type}.png`
-      : '/img/card_back_3.png';
+    if (this.material instanceof StandardMaterial) {
+      // Update texture to show front or back
+      const texturePath = isRevealed
+        ? `/img/${this.config.card.value}_${this.config.card.type}.png`
+        : '/img/card_back_3.png';
 
-    // Dispose old texture
-    if (this.material.diffuseTexture) {
-      this.material.diffuseTexture.dispose();
+      // Dispose old texture
+      if (this.material.diffuseTexture) {
+        this.material.diffuseTexture.dispose();
+      }
+
+      // Load new texture
+      this.material.diffuseTexture = new Texture(texturePath, this.scene);
+    } else if (this.material instanceof HoloShaderMaterial) {
+      // For HoloShaderMaterial, need to recreate material with new texture
+      this.material.dispose();
+      this.material = this.createHoloMaterial();
+      this.mesh.material = this.material;
     }
-
-    // Load new texture
-    this.material.diffuseTexture = new Texture(texturePath, this.scene);
   }
 
   /**
@@ -281,5 +320,14 @@ export class BabylonCardMesh {
    */
   public getDimensions(): { width: number; height: number } {
     return CARD_DIMENSIONS[this.config.size];
+  }
+
+  /**
+   * Update mouse position for holographic effect (normalized 0-1 coordinates)
+   */
+  public updateMousePosition(x: number, y: number): void {
+    if (this.material instanceof HoloShaderMaterial) {
+      this.material.updateMousePosition(x, y);
+    }
   }
 }

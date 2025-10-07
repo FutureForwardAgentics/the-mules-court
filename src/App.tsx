@@ -4,6 +4,8 @@ import { GameBoard } from "./components/GameBoard";
 import { SessionViewer } from "./components/SessionViewer";
 import { BabylonEffects } from "./components/BabylonEffects";
 import { BabylonCard3DDemo } from "./components/BabylonCard3DDemo";
+import { CardShowcase } from "./components/CardShowcase";
+import { PlayingBoard } from "./components/PlayingBoard";
 import {
   BabylonEffectsProvider,
   useBabylonEffects,
@@ -23,6 +25,14 @@ function App() {
 
   if (demo === '3d') {
     return <BabylonCard3DDemo />;
+  }
+
+  if (demo === 'cards') {
+    return <CardShowcase />;
+  }
+
+  if (demo === 'board') {
+    return <PlayingBoard />;
   }
 
   return (
