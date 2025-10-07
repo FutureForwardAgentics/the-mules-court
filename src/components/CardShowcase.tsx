@@ -110,7 +110,7 @@ export function CardShowcase() {
       const cardMesh = new BabylonCardMesh(scene, {
         card,
         size: 'medium',
-        isRevealed: true, // Show all card fronts
+        isRevealed: false, // Show card backs
         isInteractive: true,
         position,
         rotation: new Vector3(0.1, 0, 0), // Slight forward tilt
