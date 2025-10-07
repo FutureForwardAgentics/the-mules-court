@@ -81,23 +81,21 @@ export class BabylonCardMesh {
     this.initializeMaterial();
     this.initializeBackMaterial();
 
-    // Set initial position for both meshes
-    this.mesh.position = config.position;
-    this.backMesh.position = config.position;
+    // Parent back mesh to front mesh so they transform together
+    this.backMesh.parent = this.mesh;
 
-    // Apply rotation for 2.5D effect if provided
+    // Position back mesh slightly behind to prevent z-fighting (in local space)
+    this.backMesh.position = new Vector3(0, 0, -0.001);
+
+    // Rotate back mesh 180° on Y axis (in local space) to face opposite direction
+    this.backMesh.rotation = new Vector3(0, Math.PI, 0);
+
+    // Set initial position and rotation for front mesh (parent)
+    this.mesh.position = config.position;
     if (config.rotation) {
       this.mesh.rotation = config.rotation;
-      // Back mesh has same rotation plus 180° on Y axis
-      this.backMesh.rotation = new Vector3(
-        config.rotation.x,
-        config.rotation.y + Math.PI,
-        config.rotation.z
-      );
     } else {
-      // Default slight tilt for depth
-      this.mesh.rotation = new Vector3(0.1, 0, 0); // Tilt forward slightly
-      this.backMesh.rotation = new Vector3(0.1, Math.PI, 0); // Tilt forward, facing opposite
+      this.mesh.rotation = new Vector3(0.1, 0, 0); // Default slight tilt
     }
 
     // Enable shadow casting if shadow generator provided

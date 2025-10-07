@@ -35,9 +35,9 @@ export class CardTextureComposer {
 
   /**
    * Create a composed card texture for the given card
-   * Ultra high resolution (2048x3072) for maximum text clarity
+   * Maximum resolution (4096x6144) for crystal-clear text at all angles
    */
-  public async createCardTexture(card: Card, width: number = 2048, height: number = 3072): Promise<DynamicTexture> {
+  public async createCardTexture(card: Card, width: number = 4096, height: number = 6144): Promise<DynamicTexture> {
     // Wait for template to load
     if (!this.templateLoaded) {
       await this.waitForTemplate();
@@ -68,9 +68,9 @@ export class CardTextureComposer {
       const portraitX = (width - portraitWidth) / 2;
       const portraitY = height * 0.18; // Below the name banner
 
-      // Draw portrait with rounded corners effect (clip)
+      // Draw portrait with rounded corners effect (clip) - doubled radius for 4K resolution
       ctx.save();
-      this.roundRect(ctx, portraitX, portraitY, portraitWidth, portraitHeight, 60);
+      this.roundRect(ctx, portraitX, portraitY, portraitWidth, portraitHeight, 120);
       ctx.clip();
       ctx.drawImage(portraitImage, portraitX, portraitY, portraitWidth, portraitHeight);
       ctx.restore();
@@ -121,22 +121,22 @@ export class CardTextureComposer {
     const x = width * 0.1;
     const y = height * 0.08;
 
-    // Draw background circle
+    // Draw background circle (doubled for 4K resolution)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.beginPath();
-    ctx.arc(x, y, 160, 0, Math.PI * 2);
+    ctx.arc(x, y, 320, 0, Math.PI * 2);
     ctx.fill();
 
-    // Draw gold border
+    // Draw gold border (doubled for 4K resolution)
     ctx.strokeStyle = '#fbbf24';
-    ctx.lineWidth = 12;
+    ctx.lineWidth = 24;
     ctx.beginPath();
-    ctx.arc(x, y, 160, 0, Math.PI * 2);
+    ctx.arc(x, y, 320, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Draw value text
+    // Draw value text (doubled for 4K resolution)
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 192px Arial, sans-serif';
+    ctx.font = 'bold 384px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(value.toString(), x, y);
@@ -149,14 +149,14 @@ export class CardTextureComposer {
     const x = width / 2;
     const y = height * 0.085;
 
-    // Draw semi-transparent background banner
+    // Draw semi-transparent background banner (doubled for 4K resolution)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-    ctx.fillRect(width * 0.2, y - 100, width * 0.6, 200);
+    ctx.fillRect(width * 0.2, y - 200, width * 0.6, 400);
 
-    // Draw name with text outline for visibility
+    // Draw name with text outline for visibility (doubled for 4K resolution)
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 16;
-    ctx.font = 'bold 128px Arial, sans-serif';
+    ctx.lineWidth = 32;
+    ctx.font = 'bold 256px Arial, sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.strokeText(name, x, y);
@@ -167,22 +167,22 @@ export class CardTextureComposer {
 
   /**
    * Draw ability text in bottom half
-   * Ultra high resolution for maximum readability
+   * Maximum 4K resolution for crystal-clear readability at all angles
    */
   private drawAbility(ctx: CanvasRenderingContext2D, ability: string, width: number, height: number): void {
     const padding = width * 0.08;
     const startY = height * 0.68;
     const maxWidth = width - (padding * 2);
 
-    // Draw semi-transparent background
+    // Draw semi-transparent background (doubled for 4K resolution)
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(padding - 40, startY - 60, maxWidth + 80, height * 0.28);
+    ctx.fillRect(padding - 80, startY - 120, maxWidth + 160, height * 0.28);
 
-    // Word wrap the ability text with high-quality rendering
+    // Word wrap the ability text with high-quality rendering (doubled for 4K resolution)
     ctx.fillStyle = '#ffffff';
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 8;
-    ctx.font = 'bold 80px Arial, sans-serif';
+    ctx.lineWidth = 16; // Doubled from 8
+    ctx.font = 'bold 160px Arial, sans-serif'; // Doubled from 80px
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
@@ -206,8 +206,8 @@ export class CardTextureComposer {
       lines.push(currentLine);
     }
 
-    // Draw each line with thick outline for better readability
-    const lineHeight = 104;
+    // Draw each line with thick outline for better readability (doubled for 4K resolution)
+    const lineHeight = 208; // Doubled from 104
     lines.forEach((line, index) => {
       const y = startY + (index * lineHeight);
 
