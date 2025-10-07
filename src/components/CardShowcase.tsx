@@ -106,7 +106,7 @@ export function CardShowcase() {
       const y = -(row - Math.ceil(totalCards / cols) / 2 + 0.5) * spacing;
       const position = new Vector3(x, y, 0);
 
-      // Create card mesh with holographic shader
+      // Create card mesh
       const cardMesh = new BabylonCardMesh(scene, {
         card,
         size: 'medium',
@@ -115,7 +115,7 @@ export function CardShowcase() {
         position,
         rotation: new Vector3(0.1, 0, 0), // Slight forward tilt
         shadowGenerator,
-        useHoloShader: true, // Enable holographic effect
+        useHoloShader: false, // Disable holographic effect
         onCardClick: (cardId) => {
           console.log(`Card clicked: ${cardId}`, card);
         }

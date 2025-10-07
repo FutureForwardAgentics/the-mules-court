@@ -21,6 +21,7 @@ export interface Card {
   icon: string;
   quote: string;
   description: string;
+  portraitPath: string; // Path to portrait image (randomly selected per game load)
 }
 
 export interface Player {

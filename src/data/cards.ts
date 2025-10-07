@@ -1,6 +1,6 @@
 import type { Card, CardType } from '../types/game';
 
-const cardDefinitions: Omit<Card, 'id'>[] = [
+const cardDefinitions: Omit<Card, 'id' | 'portraitPath'>[] = [
   {
     type: 'informant',
     value: 1,
@@ -113,9 +113,47 @@ const cardDefinitions: Omit<Card, 'id'>[] = [
   }
 ];
 
+/**
+ * Get folder name for a card type
+ */
+function getFolderName(type: CardType): string {
+  // All card types use their hyphenated form as folder names
+  return type;
+}
+
+/**
+ * Randomly select a portrait variant (0-3) for each card type
+ */
+function selectRandomPortraits(): Record<CardType, number> {
+  const portraits: Partial<Record<CardType, number>> = {};
+
+  const cardTypes: CardType[] = [
+    'informant',
+    'han-pritcher',
+    'bail-channis',
+    'ebling-mis',
+    'magnifico',
+    'shielded-mind',
+    'bayta-darell',
+    'toran-darell',
+    'mayor-indbur',
+    'first-speaker',
+    'mule'
+  ];
+
+  cardTypes.forEach(type => {
+    portraits[type] = Math.floor(Math.random() * 4); // 0-3
+  });
+
+  return portraits as Record<CardType, number>;
+}
+
 export function createDeck(): Card[] {
   const deck: Card[] = [];
   let idCounter = 0;
+
+  // Randomly select portrait variants for this game session
+  const selectedPortraits = selectRandomPortraits();
 
   // Add cards according to their count in the game
   const cardCounts: Record<CardType, number> = {
@@ -134,10 +172,15 @@ export function createDeck(): Card[] {
 
   cardDefinitions.forEach(cardDef => {
     const count = cardCounts[cardDef.type];
+    const portraitVariant = selectedPortraits[cardDef.type];
+    const folderName = getFolderName(cardDef.type);
+    const portraitPath = `/img/${folderName}/portrait_${portraitVariant}.png`;
+
     for (let i = 0; i < count; i++) {
       deck.push({
         ...cardDef,
-        id: `${cardDef.type}-${idCounter++}`
+        id: `${cardDef.type}-${idCounter++}`,
+        portraitPath
       });
     }
   });
@@ -154,7 +197,7 @@ export function shuffleDeck(deck: Card[]): Card[] {
   return shuffled;
 }
 
-export function getCardDefinition(type: CardType): Omit<Card, 'id'> {
+export function getCardDefinition(type: CardType): Omit<Card, 'id' | 'portraitPath'> {
   const def = cardDefinitions.find(c => c.type === type);
   if (!def) throw new Error(`Unknown card type: ${type}`);
   return def;
