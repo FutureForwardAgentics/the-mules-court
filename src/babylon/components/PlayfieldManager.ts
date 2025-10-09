@@ -49,8 +49,9 @@ export class PlayfieldManager {
     this.scene = scene;
     this.advancedTexture = advancedTexture;
 
-    // Create camera with better positioning for 2.5D
-    const camera = new FreeCamera('playfield-camera', new Vector3(0, -5, -20), scene);
+    // Create camera with better positioning for 2.5D card game
+    // Position further back to fit entire playfield
+    const camera = new FreeCamera('playfield-camera', new Vector3(0, -8, -35), scene);
     camera.setTarget(new Vector3(0, 0, 0));
     scene.activeCamera = camera;
 
@@ -470,10 +471,10 @@ class PlayerAreaUI {
     // Calculate perspective scale (player 0 is closest = 1.0, others scale down)
     const perspectiveScale = playerIndex === 0 ? 1.0 : 0.85;
 
-    // Create main container (larger for better visibility and depth)
+    // Create main container (optimized size to prevent overlaps)
     this.container = new Rectangle(`player-${player.id}-container`);
-    this.container.width = '400px'; // Increased from 300px
-    this.container.height = '240px'; // Increased from 180px
+    this.container.width = '320px'; // Reduced from 400px to fit better
+    this.container.height = '200px'; // Reduced from 240px to fit better
     this.container.thickness = 3; // Thicker border
     this.container.cornerRadius = 15; // Rounder corners
     this.container.color = '#6b7280';
@@ -531,15 +532,15 @@ class PlayerAreaUI {
     this.tokenContainer.top = '40px';
     this.container.addControl(this.tokenContainer);
 
-    // Hand placeholder (larger for bigger cards)
+    // Hand placeholder (sized for cards)
     this.handContainer = new Rectangle(`player-${player.id}-hand`);
-    this.handContainer.width = '250px'; // Increased from 150px
-    this.handContainer.height = '160px'; // Increased from 60px
+    this.handContainer.width = '220px'; // Reduced to fit in smaller container
+    this.handContainer.height = '130px'; // Reduced to fit in smaller container
     this.handContainer.thickness = 2;
     this.handContainer.cornerRadius = 10;
     this.handContainer.color = '#4b5563';
     this.handContainer.background = 'rgba(0, 0, 0, 0.3)';
-    this.handContainer.top = '60px';
+    this.handContainer.top = '50px';
     this.container.addControl(this.handContainer);
 
     const handLabel = new TextBlock(`player-${player.id}-hand-label`, 'Hand');
@@ -547,16 +548,16 @@ class PlayerAreaUI {
     handLabel.color = '#9ca3af';
     this.handContainer.addControl(handLabel);
 
-    // Discard pile (played cards) - larger for better visibility
+    // Discard pile (played cards) - sized appropriately
     this.discardContainer = new Rectangle(`player-${player.id}-discard`);
-    this.discardContainer.width = '120px'; // Increased from 100px
-    this.discardContainer.height = '130px'; // Increased from 80px
+    this.discardContainer.width = '100px'; // Reduced to fit better
+    this.discardContainer.height = '110px'; // Reduced to fit better
     this.discardContainer.thickness = 2;
     this.discardContainer.cornerRadius = 10;
     this.discardContainer.color = '#6b7280';
     this.discardContainer.background = 'rgba(0, 0, 0, 0.3)';
-    this.discardContainer.top = '-70px';
-    this.discardContainer.left = '130px';
+    this.discardContainer.top = '-60px';
+    this.discardContainer.left = '110px';
     this.container.addControl(this.discardContainer);
 
     const discardLabel = new TextBlock(`player-${player.id}-discard-label`, 'Played');
@@ -641,6 +642,19 @@ class PlayerAreaUI {
   }
 
   private updateHandCards(player: Player, animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
+    // CRITICAL: Always clear BOTH GUI and 3D cards to prevent duplication
+    // This ensures cards don't accumulate when switching modes or updating
+
+    // Clear GUI cards
+    this.handCards.forEach(card => card.dispose());
+    this.handCards = [];
+    this.handContainer.clearControls();
+
+    // Clear 3D mesh cards
+    this.handMeshCards.forEach(card => card.dispose());
+    this.handMeshCards = [];
+
+    // Now render new cards in the appropriate mode
     if (this.use3DCards) {
       // Use 3D mesh cards
       this.update3DHandCards(player, animateNewCard, onCardClick);
@@ -651,9 +665,7 @@ class PlayerAreaUI {
   }
 
   private update3DHandCards(player: Player, _animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
-    // Clear existing 3D cards
-    this.handMeshCards.forEach(card => card.dispose());
-    this.handMeshCards = [];
+    // Cards already cleared in updateHandCards - no need to clear again
 
     const handCount = player.hand.length;
 
@@ -699,10 +711,7 @@ class PlayerAreaUI {
   }
 
   private updateGUIHandCards(player: Player, animateNewCard: boolean = false, onCardClick?: (cardId: string) => void): void {
-    // Clear existing cards
-    this.handCards.forEach(card => card.dispose());
-    this.handCards = [];
-    this.handContainer.clearControls();
+    // Cards already cleared in updateHandCards - no need to clear again
 
     const handCount = player.hand.length;
 
