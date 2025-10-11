@@ -1,16 +1,18 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, lazy, Suspense } from "react";
 import { useGameWithAI } from "./hooks/useGameWithAI";
 import { GameBoard } from "./components/GameBoard";
 import { SessionViewer } from "./components/SessionViewer";
 import { BabylonEffects } from "./components/BabylonEffects";
-import { BabylonCard3DDemo } from "./components/BabylonCard3DDemo";
-import { CardShowcase } from "./components/CardShowcase";
-import { PlayingBoard } from "./components/PlayingBoard";
 import {
   BabylonEffectsProvider,
   useBabylonEffects,
 } from "./contexts/BabylonEffectsContext";
 import { Color3 } from "@babylonjs/core";
+
+// Lazy load demo components - only loaded when URL parameters request them
+const BabylonCard3DDemo = lazy(() => import("./components/BabylonCard3DDemo").then(m => ({ default: m.BabylonCard3DDemo })));
+const CardShowcase = lazy(() => import("./components/CardShowcase").then(m => ({ default: m.CardShowcase })));
+const PlayingBoard = lazy(() => import("./components/PlayingBoard").then(m => ({ default: m.PlayingBoard })));
 
 function App() {
   console.log("App component rendering (React+Tailwind version)");
@@ -24,15 +26,27 @@ function App() {
   const demo = params.get('demo');
 
   if (demo === '3d') {
-    return <BabylonCard3DDemo />;
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading 3D Demo...</div>}>
+        <BabylonCard3DDemo />
+      </Suspense>
+    );
   }
 
   if (demo === 'cards') {
-    return <CardShowcase />;
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading Card Showcase...</div>}>
+        <CardShowcase />
+      </Suspense>
+    );
   }
 
   if (demo === 'board') {
-    return <PlayingBoard />;
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-gray-900 flex items-center justify-center text-white">Loading Playing Board...</div>}>
+        <PlayingBoard />
+      </Suspense>
+    );
   }
 
   return (

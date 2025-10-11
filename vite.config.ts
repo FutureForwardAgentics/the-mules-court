@@ -23,6 +23,7 @@ export default defineConfig({
     setupFiles: './src/test/setup.ts',
   },
   build: {
+    chunkSizeWarningLimit: 6000, // 6MB limit - BabylonJS core is a comprehensive 3D engine (~5.6MB uncompressed, ~1.2MB gzipped)
     rollupOptions: {
       output: {
         assetFileNames: (assetInfo) => {
@@ -30,6 +31,25 @@ export default defineConfig({
             return 'assets/[name][extname]';
           }
           return 'assets/[name]-[hash][extname]';
+        },
+        manualChunks: (id) => {
+          // Split BabylonJS into separate chunks
+          if (id.includes('@babylonjs/core')) {
+            return 'babylon-core';
+          }
+          if (id.includes('@babylonjs/gui')) {
+            return 'babylon-gui';
+          }
+
+          // Vendor chunk for React and React-DOM
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+            return 'vendor-react';
+          }
+
+          // Separate chunk for other node_modules
+          if (id.includes('node_modules')) {
+            return 'vendor-misc';
+          }
         },
       },
     },
