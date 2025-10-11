@@ -55,6 +55,7 @@ export class BabylonCardMesh {
   private scene: Scene;
   private config: CardMeshConfig;
   private static composerInstance: CardTextureComposer | null = null;
+  private isDisposed: boolean = false; // Track disposal state to prevent async race conditions
 
   constructor(scene: Scene, config: CardMeshConfig) {
     this.scene = scene;
@@ -166,6 +167,13 @@ export class BabylonCardMesh {
       const composer = BabylonCardMesh.composerInstance!;
       const cardTexture = await composer.createCardTexture(this.config.card);
 
+      // CRITICAL: Check if disposed during async loading
+      if (this.isDisposed) {
+        // Card was disposed while loading - clean up texture and abort
+        cardTexture.dispose();
+        return;
+      }
+
       const standardMaterial = new StandardMaterial(
         `front-material-${this.config.card.id}`,
         this.scene
@@ -175,6 +183,12 @@ export class BabylonCardMesh {
       standardMaterial.specularPower = 32;
       standardMaterial.backFaceCulling = true; // IMPORTANT: true like CSS backface-visibility: hidden
       standardMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
+
+      // Double-check not disposed before applying
+      if (this.isDisposed) {
+        standardMaterial.dispose();
+        return;
+      }
 
       // Dispose old material and apply new one
       this.material.dispose();
@@ -196,6 +210,13 @@ export class BabylonCardMesh {
       backTexture.anisotropicFilteringLevel = 16;
       backTexture.updateSamplingMode(Texture.TRILINEAR_SAMPLINGMODE);
 
+      // CRITICAL: Check if disposed during async loading
+      if (this.isDisposed) {
+        // Card was disposed while loading - clean up texture and abort
+        backTexture.dispose();
+        return;
+      }
+
       const standardMaterial = new StandardMaterial(
         `back-material-${this.config.card.id}`,
         this.scene
@@ -204,6 +225,12 @@ export class BabylonCardMesh {
       standardMaterial.specularColor = new Color3(0.3, 0.3, 0.3);
       standardMaterial.backFaceCulling = true; // IMPORTANT: true like CSS backface-visibility: hidden
       standardMaterial.emissiveColor = new Color3(0.05, 0.05, 0.08);
+
+      // Double-check not disposed before applying
+      if (this.isDisposed) {
+        standardMaterial.dispose();
+        return;
+      }
 
       // Dispose old material and apply new one
       this.backMaterial.dispose();
@@ -328,13 +355,24 @@ export class BabylonCardMesh {
    * Dispose of the mesh and material
    */
   public dispose(): void {
+    // Set disposal flag FIRST to prevent async operations from completing
+    this.isDisposed = true;
+
     // Dispose front mesh and material
-    this.material.dispose();
-    this.mesh.dispose();
+    if (this.material) {
+      this.material.dispose();
+    }
+    if (this.mesh) {
+      this.mesh.dispose();
+    }
 
     // Dispose back mesh and material
-    this.backMaterial.dispose();
-    this.backMesh.dispose();
+    if (this.backMaterial) {
+      this.backMaterial.dispose();
+    }
+    if (this.backMesh) {
+      this.backMesh.dispose();
+    }
   }
 
   /**

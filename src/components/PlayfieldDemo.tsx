@@ -4,6 +4,8 @@ import { AdvancedDynamicTexture } from '@babylonjs/gui';
 import { BabylonCanvas } from '../babylon/engine/BabylonCanvas';
 import { PlayfieldManager } from '../babylon/components/PlayfieldManager';
 import { useGameState } from '../hooks/useGameState';
+import { useAutomatedGameplay } from '../hooks/useAutomatedGameplay';
+import { ActionNotification } from './ActionNotification';
 
 /**
  * PlayfieldDemo
@@ -16,6 +18,7 @@ export function PlayfieldDemo() {
   const [gameStarted, setGameStarted] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [playfieldManager, setPlayfieldManager] = useState<PlayfieldManager | null>(null);
+  const [autoPlayEnabled, setAutoPlayEnabled] = useState(true); // Auto-play enabled by default
 
   const onSceneReady = useCallback((scene: Scene) => {
     // Create fullscreen GUI texture
@@ -95,6 +98,8 @@ export function PlayfieldDemo() {
           <GameControls
             playerCount={playerCount}
             playfieldManager={playfieldManager}
+            autoPlayEnabled={autoPlayEnabled}
+            onToggleAutoPlay={() => setAutoPlayEnabled(!autoPlayEnabled)}
           />
         </>
       )}
@@ -105,10 +110,23 @@ export function PlayfieldDemo() {
 interface GameControlsProps {
   playerCount: 2 | 3 | 4;
   playfieldManager: PlayfieldManager | null;
+  autoPlayEnabled: boolean;
+  onToggleAutoPlay: () => void;
 }
 
-function GameControls({ playerCount, playfieldManager }: GameControlsProps) {
+function GameControls({ playerCount, playfieldManager, autoPlayEnabled, onToggleAutoPlay }: GameControlsProps) {
   const gameState = useGameState(playerCount);
+
+  // Automated gameplay
+  const { actions } = useAutomatedGameplay({
+    gameState: gameState.gameState,
+    drawCard: gameState.drawCard,
+    playCard: gameState.playCard,
+    endTurn: gameState.endTurn,
+    startNewRound: gameState.startNewRound,
+    isEnabled: autoPlayEnabled,
+    actionDelay: 1500 // 1.5 seconds between actions
+  });
 
   // Set card click handler
   useEffect(() => {
@@ -130,23 +148,42 @@ function GameControls({ playerCount, playfieldManager }: GameControlsProps) {
   const isPlayer1Turn = currentPlayer.id === 'player-0';
 
   return (
-    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
-      <div className="bg-gray-900/90 rounded-xl p-6 border-2 border-purple-600 shadow-2xl backdrop-blur-sm min-w-[400px]">
-        <h3 className="text-xl font-bold text-white mb-4 text-center">
-          Game Controls
-        </h3>
+    <>
+      {/* Action Notifications */}
+      <ActionNotification actions={actions} maxVisible={6} />
 
-        <div className="space-y-3">
-          {/* Draw Card */}
-          {isPlayer1Turn && gameState.gameState.phase === 'draw' && (
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="bg-gray-900/90 rounded-xl p-6 border-2 border-purple-600 shadow-2xl backdrop-blur-sm min-w-[400px]">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-bold text-white">
+              {autoPlayEnabled ? '🤖 Auto-Play Active' : '🎮 Manual Controls'}
+            </h3>
             <button
-              onClick={gameState.drawCard}
-              disabled={gameState.gameState.deck.length === 0}
-              className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+              onClick={onToggleAutoPlay}
+              className={`px-4 py-2 rounded-lg font-semibold transition-all duration-200 ${
+                autoPlayEnabled
+                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                  : 'bg-green-600 hover:bg-green-700 text-white'
+              }`}
             >
-              Draw Card
+              {autoPlayEnabled ? 'Pause' : 'Resume'}
             </button>
-          )}
+          </div>
+
+          <div className="space-y-3">
+          {/* Manual Controls - Only shown when auto-play is disabled */}
+          {!autoPlayEnabled && (
+            <>
+              {/* Draw Card */}
+              {isPlayer1Turn && gameState.gameState.phase === 'draw' && (
+                <button
+                  onClick={gameState.drawCard}
+                  disabled={gameState.gameState.deck.length === 0}
+                  className="w-full px-6 py-3 bg-red-600 hover:bg-red-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white font-bold rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+                >
+                  Draw Card
+                </button>
+              )}
 
           {/* Play Card */}
           {isPlayer1Turn && gameState.gameState.phase === 'play' && currentPlayer.hand.length === 2 && (
@@ -203,14 +240,31 @@ function GameControls({ playerCount, playfieldManager }: GameControlsProps) {
             </div>
           )}
 
-          {/* AI Turn Indicator */}
-          {!isPlayer1Turn && gameState.gameState.phase !== 'round-end' && gameState.gameState.phase !== 'game-end' && (
-            <div className="text-center">
-              <p className="text-purple-400 font-semibold animate-pulse">
-                {currentPlayer.name}'s Turn (AI)
+              {/* AI Turn Indicator */}
+              {!isPlayer1Turn && gameState.gameState.phase !== 'round-end' && gameState.gameState.phase !== 'game-end' && (
+                <div className="text-center">
+                  <p className="text-purple-400 font-semibold animate-pulse">
+                    {currentPlayer.name}'s Turn (AI)
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">
+                    The Mule is working...
+                  </p>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Auto-play status message */}
+          {autoPlayEnabled && (
+            <div className="text-center py-4">
+              <p className="text-green-400 font-semibold animate-pulse">
+                ▶ Watching automated gameplay...
               </p>
-              <p className="text-sm text-gray-500 mt-1">
-                The Mule is working...
+              <p className="text-sm text-gray-400 mt-2">
+                All players are controlled by AI
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Click "Pause" to take manual control
               </p>
             </div>
           )}
@@ -224,6 +278,7 @@ function GameControls({ playerCount, playfieldManager }: GameControlsProps) {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
